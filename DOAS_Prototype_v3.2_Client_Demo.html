@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<!--
+  v3.2 changelog (2026-11-01) -- internal note only, not rendered UI.
+  Built from the review of Discovery Sessions 2 and 3 (Eng. Tayel, Eng. Hisham) against v3.1 and BRB v1.2,
+  plus four product-owner decisions taken on 2026-11-01 (pending written AZ confirmation):
+   D1  "120% of Guided Value" and "more than 20% above" mean the same thing; position is now also shown as % of plan to date.
+   D2  Days on Hand uses the higher of the 3-month and 6-month average sales-out (BRB BR-11 to be updated).
+   D3  EgyDrug exceptions follow the longest route: Second Line Manager, Business Unit Director, Finance, CP.
+   D4  The final stage is named "CP" everywhere (no expansion of the acronym is assumed).
+  Gaps closed: cross-distributor combined view (Back-Office), stock and sales-out load with DOH refresh, approved quantity
+  per product (VR-12), return-and-correct loop, customer insight inside the order plus a Customer Analysis screen,
+  rejected-orders (lost opportunity) report with a notification rule, working export, phone layout, template columns.
+  Also fixed: on-screen "demonstration" wording removed; order values now equal the sum of their lines.
+  Not changed (still open with AZ): chain growth mechanism (BRB 19.1), per-branch Guided Value figures, independent-group
+  baseline (six months vs last-year average), blacklist on lines under the cap, who sees the combined view besides Back-Office.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demand Orders Approval System — AstraZeneca Egypt</title>
+<style>
+:root{
+  --mul:#830050; --mul-dk:#5f003a; --mul-lt:#a43a74; --rose:#DECFD6; --rose-sf:#f6eef2;
+  --ink:#20242e; --muted:#6b7280; --line:#e6e8ee; --bg:#f4f5f8; --card:#fff; --head:#fbfafc;
+  --green:#137a4b; --green-bg:#e6f6ed; --amber:#a86a12; --amber-bg:#fbf1dc;
+  --red:#b3261e; --red-bg:#fceceb; --blue:#1d4ed8; --blue-bg:#e9effe; --grey-bg:#eef0f5;
+  --rad:12px; --sh:0 1px 2px rgba(16,24,40,.05),0 2px 8px rgba(16,24,40,.06);
+  --sh-lg:0 10px 30px rgba(16,24,40,.14);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45}
+button{font-family:inherit;cursor:pointer}
+a{color:inherit}
+.hide{display:none!important}
+.app{display:grid;grid-template-columns:246px 1fr;min-height:100vh}
+/* Sidebar */
+.side{background:linear-gradient(180deg,var(--mul),var(--mul-dk));color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.14)}
+.brand .logo{display:flex;align-items:center;gap:10px}
+.brand .mark{width:30px;height:30px;border-radius:8px;background:#fff;color:var(--mul);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+.brand b{font-size:15px;letter-spacing:.2px}
+.brand span{display:block;font-size:11px;opacity:.8;margin-top:3px}
+.nav{padding:12px 10px;overflow-y:auto;flex:1}
+.nav .sec{font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.55;padding:14px 12px 5px}
+.nav a{display:flex;align-items:center;gap:11px;padding:10px 12px;color:#fff;text-decoration:none;border-radius:9px;font-size:13.5px;opacity:.9;margin-bottom:2px;position:relative}
+.nav a .ic{width:18px;text-align:center}
+.nav a:hover{background:rgba(255,255,255,.10)}
+.nav a.on{background:#fff;color:var(--mul);font-weight:600;opacity:1}
+.nav a .badge{position:absolute;right:10px;background:#fff;color:var(--mul);font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px}
+.nav a.on .badge{background:var(--mul);color:#fff}
+.side .foot{padding:12px 18px;font-size:11px;opacity:.7;border-top:1px solid rgba(255,255,255,.14)}
+/* Topbar */
+.top{background:var(--card);border-bottom:1px solid var(--line);padding:0 26px;height:60px;display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:30}
+.crumbs{flex:1;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.crumbs .cr{cursor:pointer}
+.crumbs .cr:hover{color:var(--mul)}
+.crumbs .cur{color:var(--ink);font-weight:600}
+.searchbox{position:relative}
+.searchbox input{padding:9px 12px 9px 34px;border:1px solid var(--line);border-radius:9px;font-size:13px;width:230px;background:var(--head)}
+.searchbox .si{position:absolute;left:11px;top:9px;color:var(--muted)}
+.rolepick{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.rolepick select{padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--rose);color:var(--mul-dk);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.main{padding:24px 26px 70px;max-width:1280px}
+.ptitle{font-size:21px;font-weight:700;margin:0 0 3px}
+.psub{color:var(--muted);font-size:13.5px;margin:0 0 20px;max-width:760px}
+/* KPI */
+.grid{display:grid;gap:16px}
+.kpis{grid-template-columns:repeat(4,1fr)}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);padding:16px 18px;box-shadow:var(--sh);cursor:pointer;transition:.15s;position:relative;overflow:hidden}
+.kpi:hover{box-shadow:var(--sh-lg);transform:translateY(-2px)}
+.kpi .lab{font-size:12px;color:var(--muted);font-weight:500}
+.kpi .val{font-size:28px;font-weight:750;margin-top:8px;letter-spacing:-.5px}
+.kpi .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.kpi .accent{position:absolute;left:0;top:0;bottom:0;width:4px}
+.a-mul{background:var(--mul)}.a-amber{background:var(--amber)}.a-red{background:var(--red)}.a-green{background:var(--green)}
+/* Card */
+.cards{grid-template-columns:1.5fr 1fr}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);box-shadow:var(--sh);overflow:hidden}
+.card>.hd{padding:15px 18px;border-bottom:1px solid var(--line);font-weight:650;display:flex;align-items:center;justify-content:space-between}
+.card>.hd .mini{font-size:12px;color:var(--muted);font-weight:400}
+.card>.bd{padding:16px 18px}
+/* Table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;padding:11px 14px;background:var(--head);color:#4a5162;font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+th .sort{opacity:.4;font-size:10px;margin-left:3px}
+th.sorted .sort{opacity:1;color:var(--mul)}
+td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr{transition:.1s}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--rose-sf)}
+tr:last-child td{border-bottom:none}
+.tnum{font-variant-numeric:tabular-nums;text-align:right}
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.c-green{background:var(--green-bg);color:var(--green)}.c-amber{background:var(--amber-bg);color:var(--amber)}
+.c-red{background:var(--red-bg);color:var(--red)}.c-blue{background:var(--blue-bg);color:var(--blue)}
+.c-grey{background:var(--grey-bg);color:#4a5162}.c-mul{background:var(--rose);color:var(--mul-dk)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:13px;font-weight:550;transition:.12s}
+.btn:hover{background:var(--grey-bg)}
+.btn.pri{background:var(--mul);border-color:var(--mul);color:#fff}
+.btn.pri:hover{background:var(--mul-dk)}
+.btn.ok{background:var(--green);border-color:var(--green);color:#fff}.btn.ok:hover{filter:brightness(.94)}
+.btn.dg{background:#fff;border-color:var(--red);color:var(--red)}.btn.dg:hover{background:var(--red-bg)}
+.btn.sm{padding:6px 12px;font-size:12.5px}
+.btn.gh{border-color:transparent;background:transparent;color:var(--mul);padding:6px 8px}
+.btn.gh:hover{background:var(--rose-sf)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.toolbar .sp{flex:1}
+.inp{padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff}
+.pills{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+.pills button{border:none;background:#fff;padding:8px 14px;font-size:12.5px;color:var(--muted);border-right:1px solid var(--line)}
+.pills button:last-child{border-right:none}
+.pills button.on{background:var(--mul);color:#fff;font-weight:600}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tabs button{border:none;background:none;padding:11px 16px;font-size:13.5px;color:var(--muted);border-bottom:2px solid transparent;font-weight:550}
+.tabs button.on{color:var(--mul);border-bottom-color:var(--mul);font-weight:650}
+/* detail */
+.dgrid{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
+.summ{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);padding:13px 15px;box-shadow:var(--sh)}
+.stat .l{font-size:11px;color:var(--muted);font-weight:500}
+.stat .v{font-size:19px;font-weight:700;margin-top:5px}
+.banner{padding:12px 15px;border-radius:10px;font-size:13px;display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;line-height:1.5}
+.b-amber{background:var(--amber-bg);border:1px solid #efd9a6;color:#71491a}
+.b-red{background:var(--red-bg);border:1px solid #f2c4c0;color:#8a201a}
+.b-green{background:var(--green-bg);border:1px solid #bfe4cd;color:#0f5f3b}
+.b-blue{background:var(--blue-bg);border:1px solid #c4d4fb;color:#20408f}
+.steps{position:relative;padding-left:6px}
+.stp{display:flex;gap:12px;padding:12px 0;position:relative}
+.stp:not(:last-child):after{content:'';position:absolute;left:12px;top:34px;bottom:-4px;width:2px;background:var(--line)}
+.stp .mk{width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;z-index:1}
+.mk.done{background:var(--green)}.mk.now{background:var(--mul)}.mk.todo{background:#c9cdd8}.mk.rej{background:var(--red)}
+.stp .tt{font-weight:600;font-size:13px}
+.stp .ms{font-size:12px;color:var(--muted);margin-top:2px}
+.quote{background:var(--rose-sf);border:1px solid var(--rose);border-radius:9px;padding:9px 12px;margin-top:8px;font-size:12.5px}
+.quote .who{font-size:11px;color:var(--mul-dk);font-weight:650;margin-bottom:2px}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px}
+.fld textarea,.fld select,.fld input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:13px}
+.fld textarea{min-height:70px;resize:vertical}
+.hint{font-size:11.5px;color:var(--muted);margin-top:5px}
+.pos-over{color:var(--red);font-weight:650}.pos-ok{color:var(--green);font-weight:650}.pos-warn{color:var(--amber);font-weight:650}
+.sec-h{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:22px 0 12px;font-weight:650}
+/* progress bars */
+.bars{display:flex;flex-direction:column;gap:11px}
+.bar{display:grid;grid-template-columns:150px 1fr 60px;gap:12px;align-items:center;font-size:12.5px}
+.track{background:var(--grey-bg);border-radius:7px;height:18px;overflow:hidden}
+.fill{height:100%;border-radius:7px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:#fff;font-size:10px;font-weight:700}
+/* wizard */
+.wiz{display:flex;gap:0;margin-bottom:22px}
+.wstep{flex:1;text-align:center;position:relative;padding:0 6px}
+.wstep .n{width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid var(--line);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.wstep.on .n{background:var(--mul);border-color:var(--mul);color:#fff}
+.wstep.done .n{background:var(--green);border-color:var(--green);color:#fff}
+.wstep .lb{font-size:12px;color:var(--muted);margin-top:6px}
+.wstep.on .lb{color:var(--ink);font-weight:600}
+.wstep:not(:last-child):after{content:'';position:absolute;top:16px;left:60%;right:-40%;height:2px;background:var(--line)}
+.wstep.done:not(:last-child):after{background:var(--green)}
+.drop{border:2px dashed var(--rose);border-radius:12px;padding:34px;text-align:center;color:var(--muted);background:var(--rose-sf);cursor:pointer}
+.drop:hover{border-color:var(--mul);color:var(--mul)}
+.drop .big{font-size:30px}
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(20,16,26,.44);display:flex;align-items:center;justify-content:center;z-index:100;padding:24px}
+.modal{background:#fff;border-radius:16px;box-shadow:var(--sh-lg);width:100%;max-width:540px;max-height:88vh;overflow:auto}
+.modal.wide{max-width:720px}
+.modal .mh{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.modal .mh b{font-size:16px}
+.modal .mb{padding:20px 22px}
+.modal .mf{padding:16px 22px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+.x{border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer;line-height:1}
+/* toast */
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:11px;box-shadow:var(--sh-lg);font-size:13.5px;z-index:200;transition:.25s;display:flex;gap:9px;align-items:center;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--green)}.toast.err{background:var(--red)}
+.empty{text-align:center;padding:52px 20px;color:var(--muted)}
+.empty .big{font-size:38px;opacity:.35}
+.subnav{display:flex;flex-direction:column;gap:2px}
+.subnav a{padding:10px 13px;border-radius:9px;font-size:13px;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:9px}
+.subnav a:hover{background:var(--grey-bg)}
+.subnav a.on{background:var(--rose-sf);color:var(--mul-dk);font-weight:600}
+.tag{font-size:10.5px;background:var(--rose);color:var(--mul-dk);padding:2px 8px;border-radius:6px;font-weight:600}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:12px}
+.legend span{display:flex;align-items:center;gap:6px}
+@media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.cards,.dgrid{grid-template-columns:1fr}.summ{grid-template-columns:repeat(2,1fr)}}
+.qty{width:96px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;text-align:right}
+.qty.bad{border-color:var(--red);background:var(--red-bg)}
+.svgc{width:100%;height:auto;display:block}
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.mix{display:grid;grid-template-columns:130px 1fr 46px;gap:10px;align-items:center;font-size:12.5px;margin:8px 0}
+.mix .track{height:14px}
+@media(max-width:720px){
+ .app{grid-template-columns:minmax(0,1fr)}
+ .side,.main,.top,.app>*{min-width:0;max-width:100vw}
+ .nav{max-width:100vw}
+ .side{position:static;height:auto}
+ .brand{padding:12px 14px}
+ .nav{display:flex;flex-wrap:nowrap;overflow-x:auto;padding:6px 8px;gap:4px;flex:none}
+ .nav .sec{display:none}
+ .nav a{white-space:nowrap;margin:0;padding:9px 12px}
+ .nav a .badge{position:static;margin-left:6px}
+ .side .foot{display:none}
+ .top{height:auto;flex-wrap:wrap;padding:10px 14px;gap:10px;position:static}
+ .crumbs{flex:1 1 100%;flex-wrap:wrap}
+ .searchbox{flex:1 1 100%;order:3}.searchbox input{width:100%}
+ .main{padding:16px 14px 60px}
+ .kpis,.summ{grid-template-columns:1fr 1fr}
+ .cards,.dgrid,.cmp{grid-template-columns:1fr}
+ .grid[style*="230px"]{grid-template-columns:1fr!important}
+ .bar{grid-template-columns:96px 1fr 44px}
+ .mix{grid-template-columns:96px 1fr 40px}
+ .tabs{overflow-x:auto}.tabs button{white-space:nowrap}
+ .btn{min-height:40px}
+ .wstep .lb{font-size:11px}
+ .modal,.modal.wide{max-width:100%}
+ .overlay{padding:10px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="logo"><div class="mark">AZ</div><div><b>DOAS</b><span>Demand Orders Approval</span></div></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot">AstraZeneca Egypt</div>
+  </aside>
+  <div>
+    <div class="top">
+      <div class="crumbs" id="crumbs"></div>
+      <div class="searchbox"><span class="si">&#128269;</span><input id="globalSearch" placeholder="Search orders, customers…" autocomplete="off"></div>
+      <div class="rolepick">Viewing as
+        <select id="role"></select>
+      </div>
+      <div class="avatar" id="avatar">BO</div>
+    </div>
+    <div class="main" id="main"></div>
+  </div>
+</div>
+<div id="modalRoot"></div>
+<div class="toast" id="toast"></div>
+<script>
+/* ============================ DATA ============================ */
+const ROLES={
+  DistMgr:{name:'Distribution Manager',short:'DM',desc:'Two client employees who prepare and submit demand orders.'},
+  BackOffice:{name:'Back-Office Monitoring',short:'BO',desc:'Reviews above-allowance orders, maintains the control data and routing, and configures the system.'},
+  SecondLine:{name:'Second Line Manager',short:'SL',desc:'First approval stage, responsible for particular products.'},
+  BUDirector:{name:'Business Unit Director',short:'BU',desc:'Approval stage above the Second Line Manager.'},
+  Finance:{name:'Finance',short:'FI',desc:'Financial approval gate.'},
+  Compliance:{name:'CP',short:'CP',desc:'Final approval stage for the highest-exposure orders.'},
+  Management:{name:'Management',short:'MG',desc:'Executive oversight of performance and exposure.'}
+};
+const STAGE={SecondLine:'Second Line Manager',BUDirector:'Business Unit Director',Finance:'Finance',Compliance:'CP'};
+const SECTORS={
+  chain:{name:'Grouped Chain Pharmacies',basis:'Reviewed on value — each product against its approved growth allowance, and the group against its expected annual plan.',money:true},
+  egydrug:{name:'EgyDrug Chain Pharmacies',basis:'Managed on stock coverage against a 30-day target for each pharmacy.',money:false},
+  independent:{name:'Independent Pharmacies',basis:'Reviewed on demand growth against recent average demand, within an approved order limit.',money:false},
+  hospital:{name:'Private Hospitals',basis:'Reviewed on demand growth against recent average demand, within an approved order limit.',money:false},
+  ngo:{name:'NGOs',basis:'Reviewed on demand growth against recent average demand; no standard order limit applies.',money:false}
+};
+const PRODUCTS={
+  Lynparza:{allowance:0.20,price:410,pharmLimit:80,hospLimit:120},
+  Imfinzi:{allowance:0.60,price:610,pharmLimit:null,hospLimit:null},
+  Imjudo:{allowance:0.40,price:540,pharmLimit:null,hospLimit:null},
+  Tagrisso:{allowance:0.15,price:700,pharmLimit:100,hospLimit:150},
+  Calquence:{allowance:0.25,price:480,pharmLimit:80,hospLimit:120},
+  Enhertu:{allowance:0.10,price:900,pharmLimit:60,hospLimit:90},
+  Truqap:{allowance:1.00,price:520,pharmLimit:null,hospLimit:null}
+};
+const DM_USERS=['Nour Adel','Kareem Fouad'];  // the two Distribution Manager employees
+let SEQ=6000;
+function ord(o){o.history=o.history||[];return o;}
+let ORDERS=[
+  ord({id:'CG-1042',sector:'chain',customer:'Seif Group',submittedBy:'Nour Adel',created:'2 days ago',age:'overdue',
+    status:'Escalated',kind:'escalated',route:['SecondLine','BUDirector','Finance','Compliance'],stage:1,flags:[],
+    plan:2310000,planToDate:1347500,consumed:1663200,value:1840500,branches:22,
+    lines:[{p:'Truqap',qty:1400,taken:300,over:true,others:[{d:'Distributor B',q:150},{d:'Distributor C',q:90}]},{p:'Lynparza',qty:600,taken:120,over:false},{p:'Imfinzi',qty:300,taken:80,over:true,others:[{d:'Distributor B',q:60}]}],
+    history:[{who:'Nour Adel',act:'Submitted the order',when:'2 days ago'},{who:'Second Line Manager',act:'Released above allowance with a recorded reason and passed to the Business Unit Director',when:'1 day ago',note:'Group is 23% above the annual plan; oncology demand confirmed by the field team.'}]}),
+  ord({id:'CG-1043',sector:'chain',customer:'Roshdy Pharmacies',submittedBy:'Kareem Fouad',created:'Today',age:'today',
+    status:'Stopped',kind:'blocked',route:[],stage:-1,flags:['restricted'],value:0,branches:9,
+    lines:[{p:'Imfinzi',qty:300,taken:0,over:true}],
+    history:[{who:'System',act:'Order stopped — customer is currently restricted',when:'Today'}]}),
+  ord({id:'CG-1044',sector:'chain',customer:'El Ezaby Group',submittedBy:'Nour Adel',created:'3 days ago',age:'closed',
+    status:'Approved',kind:'approved',route:['SecondLine'],stage:1,flags:[],
+    plan:1980000,planToDate:1155000,consumed:1090000,value:642000,branches:18,
+    lines:[{p:'Calquence',qty:420,taken:90,over:true},{p:'Lynparza',qty:300,taken:60,over:false}],
+    history:[{who:'Nour Adel',act:'Submitted the order',when:'3 days ago'},{who:'Second Line Manager',act:'Approved',when:'2 days ago',note:'Within the annual plan; seasonal uplift accepted.'}]}),
+  ord({id:'CG-1045',sector:'chain',customer:'Zamalek Chain',submittedBy:'Kareem Fouad',created:'1 day ago',age:'day1',
+    status:'With Finance',kind:'concern',route:['SecondLine','BUDirector','Finance'],stage:2,flags:['bulk','concern'],
+    plan:1540000,planToDate:898000,consumed:995000,value:410000,branches:14,
+    lines:[{p:'Enhertu',qty:180,taken:40,over:true,others:[{d:'Distributor D',q:35}]},{p:'Tagrisso',qty:220,taken:60,over:false}],
+    history:[{who:'Kareem Fouad',act:'Submitted the order',when:'1 day ago'},{who:'Second Line Manager',act:'Raised a concern — unusual bulk pattern — and escalated',when:'1 day ago',note:'Repeat large orders in consecutive months; asked Finance to review exposure.'},{who:'Business Unit Director',act:'Approved and passed to Finance',when:'20 hours ago'}]}),
+  ord({id:'CG-1046',sector:'chain',customer:'19011 Pharmacies',submittedBy:'Nour Adel',created:'1 day ago',age:'day1',
+    status:'Returned for correction',kind:'returned',route:['SecondLine'],stage:0,flags:[],
+    plan:880000,planToDate:513000,consumed:470000,value:230000,branches:7,
+    lines:[{p:'Imjudo',qty:150,taken:30,over:true}],
+    history:[{who:'Nour Adel',act:'Submitted the order',when:'1 day ago'},{who:'Second Line Manager',act:'Returned for correction',when:'22 hours ago',note:'Requested quantity looks mis-keyed against recent months; please confirm and resubmit.'}]}),
+
+  ord({id:'ED-2011',sector:'egydrug',customer:'EgyDrug — Nasr City',submittedBy:'Nour Adel',created:'1 day ago',age:'day1',
+    status:'Quantity adjusted',kind:'adjusted',route:['SecondLine'],stage:0,flags:['bulk'],
+    coverage:{req:900,stock:300,avg3:700,avg6:620},
+    lines:[{p:'Lynparza',qty:900,taken:0,over:true}],
+    history:[{who:'Nour Adel',act:'Submitted the order',when:'1 day ago'},{who:'System',act:'Adjusted to the quantity that reaches the 30-day cover target; remainder deferred to next month',when:'1 day ago'}]}),
+  ord({id:'ED-2012',sector:'egydrug',customer:'EgyDrug — Alexandria',submittedBy:'Kareem Fouad',created:'2 days ago',age:'closed',
+    status:'Approved',kind:'approved',route:[],stage:9,flags:[],
+    coverage:{req:150,stock:400,avg3:540,avg6:600},
+    lines:[{p:'Imfinzi',qty:150,taken:0,over:false}],
+    history:[{who:'Kareem Fouad',act:'Submitted the order',when:'2 days ago'},{who:'System',act:'Approved automatically — stock cover remains within the 30-day target',when:'2 days ago'}]}),
+  ord({id:'ED-2013',sector:'egydrug',customer:'EgyDrug — Maadi',submittedBy:'Nour Adel',created:'1 day ago',age:'day1',
+    status:'With Business Unit Director',kind:'escalated',route:['SecondLine','BUDirector','Finance','Compliance'],stage:1,flags:[],
+    coverage:{req:600,stock:900,avg3:420,avg6:450,fullWanted:true},
+    lines:[{p:'Tagrisso',qty:600,taken:0,over:true}],
+    history:[{who:'Nour Adel',act:'Submitted the order — full quantity requested despite adequate cover',when:'1 day ago'},{who:'Second Line Manager',act:'Recorded the business reason and escalated',when:'20 hours ago',note:'Launch stocking for a new hospital tender nearby.'}]}),
+
+  ord({id:'IP-3021',sector:'independent',customer:'Ali Pharmacy — Heliopolis',submittedBy:'Kareem Fouad',created:'1 day ago',age:'day1',
+    status:'With Second Line Manager',kind:'pending',route:['SecondLine'],stage:0,flags:[],
+    growth:{avg:120,req:210,taken:20,pct:0.92,threshold:0.50,limit:80},
+    lines:[{p:'Lynparza',qty:210,taken:20,over:true,others:[{d:'Distributor B',q:15}]}],
+    history:[{who:'Kareem Fouad',act:'Submitted the order',when:'1 day ago'}]}),
+  ord({id:'IP-3022',sector:'independent',customer:'Sindbad Pharmacy',submittedBy:'Nour Adel',created:'2 days ago',age:'closed',
+    status:'Approved',kind:'approved',route:[],stage:9,flags:[],
+    growth:{avg:90,req:100,taken:5,pct:0.17,threshold:0.50,limit:80},
+    lines:[{p:'Calquence',qty:100,taken:5,over:false}],
+    history:[{who:'Nour Adel',act:'Submitted the order',when:'2 days ago'},{who:'System',act:'Approved automatically — demand growth is within the review threshold',when:'2 days ago'}]}),
+  ord({id:'IP-3023',sector:'independent',customer:'El-Ezaby — Maadi (branch)',submittedBy:'Kareem Fouad',created:'2 days ago',age:'closed',
+    status:'Rejected',kind:'rejected',route:['SecondLine'],stage:0,flags:[],
+    growth:{avg:70,req:220,taken:15,pct:2.14,threshold:0.50,limit:80},
+    lines:[{p:'Enhertu',qty:220,taken:15,over:true}],
+    history:[{who:'Kareem Fouad',act:'Submitted the order',when:'2 days ago'},{who:'Second Line Manager',act:'Rejected',when:'1 day ago',note:'Requested quantity far exceeds recent demand with no supporting business case.'}]}),
+
+  ord({id:'HO-4008',sector:'hospital',customer:'Cleopatra Hospital',submittedBy:'Nour Adel',created:'1 day ago',age:'day1',
+    status:'With Second Line Manager',kind:'pending',route:['SecondLine'],stage:0,flags:[],
+    growth:{avg:140,req:250,taken:30,pct:0.70,threshold:0.50,limit:150},
+    lines:[{p:'Tagrisso',qty:250,taken:30,over:true}],
+    history:[{who:'Nour Adel',act:'Submitted the order',when:'1 day ago'}]}),
+  ord({id:'HO-4009',sector:'hospital',customer:'As-Salam International',submittedBy:'Kareem Fouad',created:'3 days ago',age:'closed',
+    status:'Approved',kind:'approved',route:['SecondLine'],stage:1,flags:[],
+    growth:{avg:100,req:180,taken:20,pct:0.80,threshold:0.50,limit:150},
+    lines:[{p:'Imfinzi',qty:180,taken:20,over:true}],
+    history:[{who:'Kareem Fouad',act:'Submitted the order',when:'3 days ago'},{who:'Second Line Manager',act:'Approved',when:'2 days ago',note:'Confirmed against an active treatment programme.'}]}),
+  ord({id:'HO-4010',sector:'hospital',customer:'Dar Al Fouad',submittedBy:'Nour Adel',created:'1 day ago',age:'day1',
+    status:'With Finance',kind:'concern',route:['SecondLine','BUDirector','Finance'],stage:2,flags:['concern'],
+    growth:{avg:110,req:260,taken:25,pct:1.05,threshold:0.50,limit:150},
+    lines:[{p:'Enhertu',qty:260,taken:25,over:true,others:[{d:'Distributor C',q:20}]}],
+    history:[{who:'Nour Adel',act:'Submitted the order',when:'1 day ago'},{who:'Second Line Manager',act:'Raised a concern and escalated to the Business Unit Director and Finance',when:'22 hours ago',note:'Sharp increase versus programme size; requested a financial exposure check.'},{who:'Business Unit Director',act:'Approved and passed to Finance',when:'18 hours ago'}]}),
+
+  ord({id:'NG-5003',sector:'ngo',customer:'Baheya Foundation',submittedBy:'Kareem Fouad',created:'2 days ago',age:'closed',
+    status:'Approved',kind:'approved',route:[],stage:9,flags:[],
+    growth:{avg:200,req:230,taken:10,pct:0.20,threshold:0.50,limit:null},
+    lines:[{p:'Lynparza',qty:230,taken:10,over:false}],
+    history:[{who:'Kareem Fouad',act:'Submitted the order',when:'2 days ago'},{who:'System',act:'Approved automatically — demand growth is within the review threshold',when:'2 days ago'}]}),
+  ord({id:'NG-5004',sector:'ngo',customer:'57357 Children’s Cancer Hospital',submittedBy:'Nour Adel',created:'1 day ago',age:'day1',
+    status:'With Second Line Manager',kind:'pending',route:['SecondLine'],stage:0,flags:[],
+    growth:{avg:150,req:300,taken:20,pct:1.13,threshold:0.50,limit:null},
+    lines:[{p:'Imfinzi',qty:300,taken:20,over:true}],
+    history:[{who:'Nour Adel',act:'Submitted the order',when:'1 day ago'}]}),
+  ord({id:'NG-5005',sector:'ngo',customer:'Magdi Yacoub Foundation',submittedBy:'Kareem Fouad',created:'4 days ago',age:'closed',
+    status:'Approved',kind:'approved',route:['SecondLine'],stage:1,flags:[],
+    growth:{avg:80,req:150,taken:10,pct:0.99,threshold:0.50,limit:null},
+    lines:[{p:'Calquence',qty:150,taken:10,over:true}],
+    history:[{who:'Kareem Fouad',act:'Submitted the order',when:'4 days ago'},{who:'Second Line Manager',act:'Approved',when:'3 days ago',note:'Charitable programme demand confirmed.'}]})
+];
+
+ORDERS.forEach(o=>{if(o.sector==='chain'&&o.kind!=='blocked')o.value=o.lines.reduce((a,l)=>a+l.qty*PRODUCTS[l.p].price,0);});
+/* Stock and sales-out (EgyDrug) */
+let STOCK=[
+  {ph:'EgyDrug — Nasr City',p:'Lynparza',stock:300,avg3:700,avg6:620},
+  {ph:'EgyDrug — Nasr City',p:'Imfinzi',stock:500,avg3:380,avg6:410},
+  {ph:'EgyDrug — Alexandria',p:'Imfinzi',stock:400,avg3:540,avg6:600},
+  {ph:'EgyDrug — Maadi',p:'Tagrisso',stock:900,avg3:420,avg6:450},
+  {ph:'EgyDrug — Maadi',p:'Calquence',stock:250,avg3:300,avg6:360}
+];
+const STOCKMETA={refreshed:'2 days ago'};
+/* Days on hand: stock / higher of the 3-month and 6-month average sales-out x 30 */
+function cov(c){const avg=Math.max(c.avg3,c.avg6);const basis=c.avg3>=c.avg6?'3-month':'6-month';
+  const cover=Math.round(c.stock/avg*30);const after=Math.round((c.stock+c.req)/avg*30);
+  const need=Math.max(0,Math.round(avg-c.stock));
+  let approved=after<=30?c.req:Math.min(c.req,need);if(c.fullWanted)approved=c.req;
+  return{avg,basis,cover,after,approved,deferred:c.req-approved};}
+/* demand history (reference series for the customer insight views) */
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul'];
+function hsh(t){let h=0;for(const ch of t)h=(h*31+ch.charCodeAt(0))>>>0;return h;}
+function series(cust,prod){const h=hsh(cust+'|'+prod);const base=40+(h%90);return MONTHS.map((_,i)=>Math.round(base*(0.85+0.04*i+0.12*Math.sin((h%7)+i*1.3))));}
+function svgLine(v,avg){const W=320,H=120,P=24;const max=Math.max(...v,avg)*1.1;const x=i=>P+i*(W-2*P)/(v.length-1);const y=a=>H-P-(a/max)*(H-2*P);
+  return `<svg class="svgc" viewBox="0 0 ${W} ${H}" role="img" aria-label="Monthly demand trend"><line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="#e6e8ee"/><line x1="${P}" y1="${y(avg)}" x2="${W-P}" y2="${y(avg)}" stroke="#a43a74" stroke-dasharray="4 3" stroke-width="1"/><polyline fill="none" stroke="#830050" stroke-width="2" points="${v.map((a,i)=>x(i)+','+y(a)).join(' ')}"/>${v.map((a,i)=>`<circle cx="${x(i)}" cy="${y(a)}" r="3" fill="#830050"/><text x="${x(i)}" y="${H-8}" font-size="9" text-anchor="middle" fill="#6b7280">${MONTHS[i]}</text>`).join('')}</svg>`;}
+function trendCard(cust,p,reqText){const sr=series(cust,p);const avg=Math.round(sr.reduce((a,b)=>a+b,0)/sr.length);
+  return `<div class="card"><div class="hd">${p}<span class="mini">${reqText?reqText+' · ':''}monthly average ${nf(avg)}</span></div><div class="bd">${svgLine(sr,avg)}</div></div>`;}
+function mixBars(cust,hi){const vols=Object.keys(PRODUCTS).map(p=>({p,v:series(cust,p).reduce((a,b)=>a+b,0)}));const tot=vols.reduce((a,x)=>a+x.v,0);
+  return vols.map(x=>{const pc=Math.round(x.v/tot*100);const on=hi.includes(x.p);return `<div class="mix"><span ${on?'style="font-weight:700"':''}>${x.p}</span><div class="track"><div class="fill" style="width:${pc*3}%;max-width:100%;background:${on?'var(--mul)':'#c9cdd8'}"></div></div><span class="tnum">${pc}%</span></div>`;}).join('');}
+
+/* Configuration data (Back-Office) */
+const CONFIG={
+  routing:[
+    {sector:'Grouped Chain Pharmacies',path:'Second Line Manager → Business Unit Director → Finance → CP'},
+    {sector:'EgyDrug Chain Pharmacies',path:'Second Line Manager → Business Unit Director → Finance → CP (exceptions: the full four-stage route)'},
+    {sector:'Independent Pharmacies',path:'Second Line Manager → (escalation on a raised concern)'},
+    {sector:'Private Hospitals',path:'Second Line Manager → (escalation on a raised concern)'},
+    {sector:'NGOs',path:'Second Line Manager → (escalation on a raised concern)'}
+  ],
+  stages:[
+    {stage:'Second Line Manager',holder:'Assigned by product — a team of managers',single:false},
+    {stage:'Business Unit Director',holder:'Dr. Hana Sabry',single:true},
+    {stage:'Finance',holder:'Mostafa Kamal',single:true},
+    {stage:'CP',holder:'Yasmine Adel',single:true}
+  ],
+  thresholds:[
+    {sector:'Grouped Chain Pharmacies',rule:'Escalate beyond the Second Line Manager when consumption to date is more than 120% of the plan to date (more than 20% above).'},
+    {sector:'EgyDrug Chain Pharmacies',rule:'Days on hand use the higher of the 3-month and 6-month average sales-out. Adjust to the quantity that reaches 30 days of cover; escalate only when the full quantity is still requested.'},
+    {sector:'Independent Pharmacies',rule:'Manager review when demand growth exceeds 50% of recent average.'},
+    {sector:'Private Hospitals',rule:'Manager review when demand growth exceeds 50% of recent average.'},
+    {sector:'NGOs',rule:'Manager review when demand growth exceeds 50% of recent average.'}
+  ],
+  productMap:[
+    {product:'Truqap',owner:'Ahmed Salah',compliance:true},
+    {product:'Imfinzi',owner:'Ahmed Salah',compliance:true},
+    {product:'Imjudo',owner:'Ahmed Salah',compliance:false},
+    {product:'Lynparza',owner:'Dina Wahba',compliance:false},
+    {product:'Tagrisso',owner:'Dina Wahba',compliance:true},
+    {product:'Calquence',owner:'Omar Fathy',compliance:false},
+    {product:'Enhertu',owner:'Omar Fathy',compliance:true}
+  ],
+  guided:[
+    {chain:'Seif Group',branches:22,perBranch:105000,plan:2310000},
+    {chain:'El Ezaby Group',branches:18,perBranch:110000,plan:1980000},
+    {chain:'Zamalek Chain',branches:14,perBranch:110000,plan:1540000},
+    {chain:'19011 Pharmacies',branches:7,perBranch:125714,plan:880000},
+    {chain:'Roshdy Pharmacies',branches:9,perBranch:98000,plan:882000}
+  ],
+  classifications:[
+    {customer:'Seif Group',sector:'Grouped Chain Pharmacies',status:'Active'},
+    {customer:'Roshdy Pharmacies',sector:'Grouped Chain Pharmacies',status:'Restricted'},
+    {customer:'EgyDrug — Nasr City',sector:'EgyDrug Chain Pharmacies',status:'Active'},
+    {customer:'Ali Pharmacy — Heliopolis',sector:'Independent Pharmacies',status:'Active'},
+    {customer:'Cleopatra Hospital',sector:'Private Hospitals',status:'Active'},
+    {customer:'Baheya Foundation',sector:'NGOs',status:'Active'}
+  ],
+  notifications:[
+    {stage:'On submission',channel:'In-app + email to the reviewing team',timing:'Immediately'},
+    {stage:'Reaching an approver',channel:'In-app + email with a direct link to the order',timing:'Immediately'},
+    {stage:'Ageing',channel:'On-screen highlight for every approver',timing:'Turns orange after 1 day, red after 3 days'},
+    {stage:'Order rejected',channel:'In-app + email to the Back-Office team',timing:'Immediately — recorded as a lost opportunity'},
+    {stage:'Final decision',channel:'Email to the person who created the order',timing:'On the final approval'}
+  ],
+  masterData:[
+    {set:'Products & prices',records:7,updated:'This week'},
+    {set:'Approved order limits',records:24,updated:'This week'},
+    {set:'Coverage targets',records:12,updated:'2 weeks ago'},
+    {set:'Stock and sales-out',records:5,updated:'2 days ago'},
+    {set:'Approved growth allowances',records:7,updated:'This week'},
+    {set:'Customer directory',records:318,updated:'Yesterday'},
+    {set:'Restricted customers',records:14,updated:'Yesterday'}
+  ]
+};
+
+/* ============================ STATE ============================ */
+const S={role:'BackOffice',screen:'dashboard',params:{},
+  filters:{sector:'all',status:'all',q:''},sort:{key:'id',dir:1},
+  cfgArea:'routing',wizStep:1};
+const NAVDEF=[
+  {sec:'Work'},
+  {id:'dashboard',ic:'▤',label:'Dashboard',roles:['BackOffice','Management']},
+  {id:'orders',ic:'▦',label:'Orders',roles:['BackOffice','SecondLine','BUDirector','Finance','Compliance']},
+  {id:'analysis',ic:'◔',label:'Customer Analysis',roles:['BackOffice','SecondLine','BUDirector','Finance','Compliance','Management']},
+  {id:'stock',ic:'◫',label:'Stock & Sales-out',roles:['BackOffice']},
+  {id:'tasks',ic:'◉',label:'My Approvals',roles:['SecondLine','BUDirector','Finance','Compliance'],badge:'tasks'},
+  {id:'submit',ic:'⇪',label:'Submit Order',roles:['DistMgr']},
+  {id:'myorders',ic:'≣',label:'My Orders',roles:['DistMgr']},
+  {sec:'Reference'},
+  {id:'reference',ic:'▥',label:'Business Reference',roles:'all'},
+  {id:'reports',ic:'▣',label:'Reports',roles:['BackOffice','Management']},
+  {sec:'Administration'},
+  {id:'config',ic:'⚙',label:'Configuration',roles:['BackOffice']},
+  {id:'about',ic:'◇',label:'Roles & Process',roles:'all'}
+];
+
+/* ============================ HELPERS ============================ */
+const $=s=>document.querySelector(s);
+const money=n=>'EGP '+Number(Math.round(n)).toLocaleString();
+const nf=n=>Number(n).toLocaleString();
+const pct=n=>Math.round(n*100)+'%';
+function toast(m,kind){const t=$('#toast');t.className='toast show '+(kind||'');t.innerHTML=(kind==='ok'?'✓ ':kind==='err'?'⚠ ':'')+m;clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',2600);}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+const visibleNav=()=>NAVDEF.filter(n=>n.sec||n.roles==='all'||n.roles.includes(S.role));
+function tasksForRole(){if(!['SecondLine','BUDirector','Finance','Compliance'].includes(S.role))return [];
+  return ORDERS.filter(o=>o.route&&o.route[o.stage]===S.role&&['pending','escalated','concern'].includes(o.kind));}
+function ageChip(o){const m={today:['c-blue','New today'],day1:['c-amber','Day 1'],overdue:['c-red','Overdue'],day3:['c-red','Overdue'],closed:['c-grey','Closed'],day0:['c-blue','New']};const p=m[o.age]||['c-grey',o.age];return `<span class="chip ${p[0]}">${p[1]}</span>`;}
+function statusChip(o){const k=o.kind;const map={approved:['c-green','Approved'],rejected:['c-red','Rejected'],blocked:['c-red','Stopped'],
+  returned:['c-amber','Returned'],adjusted:['c-amber','Quantity adjusted'],escalated:['c-mul','Escalated'],concern:['c-amber','Concern raised'],pending:['c-blue','In approval']};
+  const p=map[k]||['c-grey',o.status];return `<span class="chip ${p[0]}">${esc(o.status)}</span>`;}
+function flagChips(o){return (o.flags||[]).map(f=>({restricted:'<span class="chip c-red">Restricted customer</span>',bulk:'<span class="chip c-mul">Bulk-purchase watch</span>',concern:'<span class="chip c-amber">Concern raised</span>'}[f]||'')).join(' ');}
+function canDecide(o){return o.route&&o.route[o.stage]===S.role||(S.role==='BackOffice'&&['pending','escalated','concern'].includes(o.kind));}
+function orderValueDisplay(o){if(o.sector==='chain')return money(o.value);const t=(o.lines||[]).reduce((a,l)=>a+l.qty,0);return nf(t)+' units';}
+
+/* ============================ RENDER ============================ */
+function renderRolePicker(){const sel=$('#role');sel.innerHTML=Object.keys(ROLES).map(r=>`<option value="${r}" ${r===S.role?'selected':''}>${ROLES[r].name}</option>`).join('');}
+function renderNav(){
+  const tasks=tasksForRole().length;
+  $('#nav').innerHTML=visibleNav().map(n=>{
+    if(n.sec)return `<div class="sec">${n.sec}</div>`;
+    const badge=(n.badge==='tasks'&&tasks)?`<span class="badge">${tasks}</span>`:'';
+    return `<a data-nav="${n.id}" class="${S.screen===n.id?'on':''}"><span class="ic">${n.ic}</span>${n.label}${badge}</a>`;
+  }).join('');
+}
+function crumb(items){$('#crumbs').innerHTML=items.map((c,i)=>i===items.length-1?`<span class="cur">${esc(c.t)}</span>`:`<span class="cr" data-nav="${c.go}">${esc(c.t)}</span><span>›</span>`).join('');}
+function setRole(r){S.role=r;const first=visibleNav().find(n=>n.id);S.screen=(visibleNav().some(n=>n.id===S.screen))?S.screen:(first?first.id:'about');$('#avatar').textContent=ROLES[r].short;render();}
+
+const SCREENS={};
+function render(){
+  renderNav();renderRolePicker();$('#avatar').textContent=ROLES[S.role].short;
+  (SCREENS[S.screen]||SCREENS.dashboard)();
+}
+
+/* ---------- Dashboard ---------- */
+SCREENS.dashboard=function(){
+  crumb([{t:'Dashboard'}]);
+  const open=ORDERS.filter(o=>['pending','escalated','concern','returned','adjusted'].includes(o.kind));
+  const escal=ORDERS.filter(o=>o.kind==='escalated'||o.kind==='concern');
+  const overdue=ORDERS.filter(o=>o.age==='overdue');
+  const approved=ORDERS.filter(o=>o.kind==='approved');
+  const bySec=Object.keys(SECTORS).map(k=>({k,n:SECTORS[k].name,c:ORDERS.filter(o=>o.sector===k).length,open:ORDERS.filter(o=>o.sector===k&&['pending','escalated','concern'].includes(o.kind)).length}));
+  const plans=CONFIG.guided.map(g=>{const o=ORDERS.find(x=>x.customer===g.chain&&x.consumed);const cons=o?o.consumed:Math.round(g.plan*0.45);const p=Math.round(cons/g.plan*100);return{name:g.chain,p};});
+  $('#main').innerHTML=`
+  <h1 class="ptitle">Dashboard</h1>
+  <p class="psub">A live view of demand-order activity across all customer sectors. Financial values are shown for the customer groups where value-based approval applies.</p>
+  <div class="grid kpis">
+    ${kpi('a-mul','Orders in progress',open.length,'Awaiting a decision or adjustment','orders','status','open')}
+    ${kpi('a-amber','Above the annual plan',escal.length,'Escalated for senior review','orders','status','escalated')}
+    ${kpi('a-red','Overdue',overdue.length,'Waiting longest','orders','status','overdue')}
+    ${kpi('a-green','Approved this period',approved.length,'Completed successfully','orders','status','approved')}
+  </div>
+  <div class="grid cards" style="margin-top:16px">
+    <div class="card"><div class="hd">Annual plan consumed by customer group <span class="mini">Value-based sectors</span></div>
+      <div class="bd"><div class="bars">${plans.map(x=>bar(x.name,x.p)).join('')}</div>
+      <div class="legend"><span><span class="dot" style="background:var(--green)"></span>Within plan</span><span><span class="dot" style="background:var(--amber)"></span>Approaching</span><span><span class="dot" style="background:var(--red)"></span>Above plan</span></div></div></div>
+    <div class="card"><div class="hd">Activity by sector</div><div class="tbl-wrap"><table><tbody>
+      ${bySec.map(s=>`<tr class="click" data-sector="${s.k}"><td>${s.n}</td><td class="tnum">${s.c} orders</td><td style="text-align:right">${s.open?`<span class="chip c-blue">${s.open} open</span>`:'<span class="chip c-grey">clear</span>'}</td></tr>`).join('')}
+    </tbody></table></div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><div class="hd">Attention now <span class="mini">Orders that need a decision</span><button class="btn sm" data-nav="orders">View all orders</button></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Order</th><th>Sector</th><th>Customer</th><th>Status</th><th>Turnaround</th></tr></thead><tbody>
+    ${open.slice(0,6).map(o=>`<tr class="click" data-order="${o.id}"><td><b>${o.id}</b></td><td>${SECTORS[o.sector].name}</td><td>${esc(o.customer)}</td><td>${statusChip(o)}</td><td>${ageChip(o)}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+};
+function kpi(a,lab,val,sub,nav,fk,fv){return `<div class="kpi" data-kpi='${JSON.stringify({nav,fk,fv})}'><span class="accent ${a}"></span><div class="lab">${lab}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;}
+function bar(name,p){const col=p>100?'var(--red)':p>85?'var(--amber)':'var(--green)';return `<div class="bar"><span title="${esc(name)}">${esc(name)}</span><div class="track"><div class="fill" style="width:${Math.min(p,100)}%;background:${col}">${p}%</div></div><span class="tnum">${p}%</span></div>`;}
+
+/* ---------- Orders list ---------- */
+SCREENS.orders=function(){
+  crumb([{t:'Dashboard',go:'dashboard'},{t:'Orders'}]);
+  $('#main').innerHTML=`
+  <h1 class="ptitle">Orders</h1>
+  <p class="psub">Every demand order across all customer sectors, ordered by urgency. Select any order to see how it was assessed and to take a decision.</p>
+  <div class="toolbar">
+    <div class="pills" id="secpills">${['all',...Object.keys(SECTORS)].map(k=>`<button data-sec="${k}" class="${S.filters.sector===k?'on':''}">${k==='all'?'All sectors':SECTORS[k].name.replace(' Pharmacies','').replace(' Chain Pharmacies',' Chain')}</button>`).join('')}</div>
+    <div class="sp"></div>
+    <select class="inp" id="statusFilter">
+      ${[['all','All statuses'],['open','In progress'],['escalated','Escalated / concern'],['approved','Approved'],['rejected','Rejected / stopped'],['returned','Returned'],['adjusted','Quantity adjusted'],['overdue','Overdue']].map(x=>`<option value="${x[0]}" ${S.filters.status===x[0]?'selected':''}>${x[1]}</option>`).join('')}
+    </select>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table id="ordersTable"><thead><tr>
+    ${th('id','Order')}${th('sector','Sector')}${th('customer','Customer')}${th('value','Volume / value')}${th('status','Status')}${th('age','Turnaround')}<th></th>
+  </tr></thead><tbody id="ordersBody"></tbody></table></div></div>`;
+  drawOrders();
+};
+function th(key,label){const on=S.sort.key===key;return `<th data-sort="${key}" class="${on?'sorted':''}">${label}<span class="sort">${on?(S.sort.dir>0?'▲':'▼'):'⇅'}</span></th>`;}
+function filteredOrders(){
+  let r=ORDERS.slice();
+  if(S.filters.sector!=='all')r=r.filter(o=>o.sector===S.filters.sector);
+  const st=S.filters.status;
+  if(st==='open')r=r.filter(o=>['pending','escalated','concern','returned','adjusted'].includes(o.kind));
+  else if(st==='escalated')r=r.filter(o=>['escalated','concern'].includes(o.kind));
+  else if(st==='approved')r=r.filter(o=>o.kind==='approved');
+  else if(st==='rejected')r=r.filter(o=>['rejected','blocked'].includes(o.kind));
+  else if(st==='returned')r=r.filter(o=>o.kind==='returned');
+  else if(st==='adjusted')r=r.filter(o=>o.kind==='adjusted');
+  else if(st==='overdue')r=r.filter(o=>o.age==='overdue');
+  const q=S.filters.q.trim().toLowerCase();
+  if(q)r=r.filter(o=>(o.id+' '+o.customer+' '+SECTORS[o.sector].name).toLowerCase().includes(q));
+  const k=S.sort.key,d=S.sort.dir;
+  r.sort((a,b)=>{let va,vb;
+    if(k==='value'){va=a.sector==='chain'?a.value:(a.lines||[]).reduce((x,l)=>x+l.qty,0);vb=b.sector==='chain'?b.value:(b.lines||[]).reduce((x,l)=>x+l.qty,0);}
+    else if(k==='age'){const o={overdue:0,day1:1,today:2,closed:3};va=o[a.age]??9;vb=o[b.age]??9;}
+    else{va=(a[k]||'')+'';vb=(b[k]||'')+'';}
+    return va<vb?-d:va>vb?d:0;});
+  return r;
+}
+function drawOrders(){
+  const rows=filteredOrders();
+  const body=$('#ordersBody');
+  if(!rows.length){body.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="big">◎</div><div>No orders match these filters.</div><button class="btn sm" style="margin-top:12px" data-clearf="1">Clear filters</button></div></td></tr>`;return;}
+  body.innerHTML=rows.map(o=>`<tr class="click" data-order="${o.id}">
+    <td><b>${o.id}</b></td><td>${SECTORS[o.sector].name}</td>
+    <td>${esc(o.customer)}${o.flags&&o.flags.length?'<div style="margin-top:4px">'+flagChips(o)+'</div>':''}</td>
+    <td class="tnum">${orderValueDisplay(o)}</td>
+    <td>${statusChip(o)}</td><td>${ageChip(o)}</td>
+    <td style="text-align:right"><button class="btn sm" data-order="${o.id}">Open</button></td></tr>`).join('');
+}
+
+/* ---------- My Orders (Distribution Manager) ---------- */
+SCREENS.myorders=function(){
+  crumb([{t:'My Orders'}]);
+  const mine=ORDERS.filter(o=>DM_USERS.includes(o.submittedBy));
+  $('#main').innerHTML=`<h1 class="ptitle">My Orders</h1>
+  <p class="psub">Orders submitted by the distribution team, with their current status.</p>
+  <div class="toolbar"><button class="btn pri" data-nav="submit">⇪ New order</button><div class="sp"></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Order</th><th>Sector</th><th>Customer</th><th>Submitted by</th><th>Status</th><th>Turnaround</th></tr></thead><tbody>
+  ${mine.map(o=>`<tr class="click" data-order="${o.id}"><td><b>${o.id}</b></td><td>${SECTORS[o.sector].name}</td><td>${esc(o.customer)}</td><td>${esc(o.submittedBy)}</td><td>${statusChip(o)}</td><td>${ageChip(o)}</td></tr>`).join('')}
+  </tbody></table></div></div>`;
+};
+
+/* ---------- My Approvals ---------- */
+SCREENS.tasks=function(){
+  crumb([{t:'My Approvals'}]);
+  const t=tasksForRole();
+  $('#main').innerHTML=`<h1 class="ptitle">My Approvals</h1>
+  <p class="psub">Orders waiting for your decision as ${ROLES[S.role].name}.</p>
+  ${t.length?`<div class="card"><div class="tbl-wrap"><table><thead><tr><th>Order</th><th>Sector</th><th>Customer</th><th>Why it reached you</th><th>Turnaround</th><th></th></tr></thead><tbody>
+    ${t.map(o=>`<tr class="click" data-order="${o.id}"><td><b>${o.id}</b></td><td>${SECTORS[o.sector].name}</td><td>${esc(o.customer)}</td><td style="max-width:280px">${esc(whyReached(o))}</td><td>${ageChip(o)}</td><td style="text-align:right"><button class="btn sm pri" data-order="${o.id}">Review</button></td></tr>`).join('')}
+  </tbody></table></div></div>`:`<div class="card"><div class="empty"><div class="big">✓</div><div>You are all caught up — no orders are waiting for your decision.</div></div></div>`}`;
+};
+function whyReached(o){
+  if(o.sector==='chain')return 'Consumption to date is more than 120% of the plan to date and needs senior sign-off.';
+  if(o.sector==='egydrug')return 'Full quantity requested beyond the coverage target.';
+  return 'Demand growth is above the review threshold.';
+}
+
+/* ---------- Order detail ---------- */
+SCREENS.order=function(){
+  const o=ORDERS.find(x=>x.id===S.params.id)||ORDERS[0];
+  crumb([{t:'Orders',go:'orders'},{t:o.id}]);
+  const tab=S.params.tab||'decision';
+  $('#main').innerHTML=`
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+    <button class="btn gh" data-nav="orders">← Orders</button>
+    <h1 class="ptitle" style="margin:0">${o.id}</h1>${statusChip(o)}${ageChip(o)}
+    <div class="sp" style="flex:1"></div>${flagChips(o)}
+  </div>
+  <p class="psub">${esc(o.customer)} · ${SECTORS[o.sector].name} · submitted by ${esc(o.submittedBy)}, ${esc(o.created)}</p>
+  <div class="tabs">
+    <button class="${tab==='decision'?'on':''}" data-otab="decision">Decision</button>
+    <button class="${tab==='assessment'?'on':''}" data-otab="assessment">How this was assessed</button>
+    ${S.role!=='DistMgr'?`<button class="${tab==='insight'?'on':''}" data-otab="insight">Customer insight</button>`:''}
+    <button class="${tab==='activity'?'on':''}" data-otab="activity">Activity</button>
+  </div>
+  <div id="otab"></div>`;
+  drawOrderTab(o,tab);
+};
+function drawOrderTab(o,tab){
+  const el=$('#otab');
+  if(tab==='activity'){el.innerHTML=orderActivity(o);return;}
+  if(tab==='assessment'){el.innerHTML=orderAssessment(o);return;}
+  if(tab==='insight'){el.innerHTML=orderInsight(o);return;}
+  el.innerHTML=orderDecision(o);
+}
+function orderActivity(o){
+  return `<div class="card"><div class="bd"><div class="steps">
+  ${o.history.map((h,i)=>`<div class="stp"><div class="mk ${i===o.history.length-1?'now':'done'}">${i+1}</div>
+    <div><div class="tt">${esc(h.act)}</div><div class="ms">${esc(h.who)} · ${esc(h.when)}</div>${h.note?`<div class="quote"><div class="who">${esc(h.who)}</div>${esc(h.note)}</div>`:''}</div></div>`).join('')}
+  </div></div></div>`;
+}
+function orderAssessment(o){
+  if(o.sector==='chain'){
+    const over=o.consumed-o.planToDate,p=Math.round(over/o.planToDate*100);
+    return `<div class="banner b-blue">This customer group is reviewed on value. Two checks apply: each product against its approved growth allowance, and the group against its expected annual plan.</div>
+    <div class="summ">
+      ${stat('Expected annual plan',money(o.plan),o.branches+' branches')}
+      ${stat('Plan expected to date',money(o.planToDate),'Pro-rated for the year')}
+      ${stat('Actual demand to date',money(o.consumed),'All distribution channels combined')}
+      ${stat('Position vs plan',(p>=0?'+':'')+p+'%',posText(p))}
+    </div>
+    <div class="card"><div class="hd">Products on this order</div><div class="tbl-wrap"><table><thead><tr><th>Product</th><th>Requested</th><th>Already this month</th><th>Approved growth allowance</th><th>Position</th></tr></thead><tbody>
+    ${o.lines.map(l=>`<tr><td><b>${l.p}</b></td><td class="tnum">${nf(l.qty)}</td><td class="tnum">${nf(l.taken)}</td><td class="tnum">${pct(PRODUCTS[l.p].allowance)}</td><td>${l.over?'<span class="pos-over">Above allowance</span>':'<span class="pos-ok">Within allowance</span>'}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+  }
+  if(o.sector==='egydrug'){const c=o.coverage,k=cov(c);
+    return `<div class="banner b-blue">This pharmacy is managed on stock coverage. The quantity is measured against a 30-day cover target.</div>
+    <div class="summ">
+      ${stat('Requested quantity',nf(c.req)+' units','')}
+      ${stat('Stock on hand',nf(c.stock)+' units','')}
+      ${stat('Average sales-out used',nf(k.avg)+'/mo','Higher of 3-month '+nf(c.avg3)+' and 6-month '+nf(c.avg6))}
+      ${stat('Days on hand now',k.cover+' days','After this order: '+k.after+' days · target 30')}
+    </div>
+    <div class="summ">
+      ${stat('Quantity to 30-day target',nf(k.approved)+' units','')}
+      ${stat('Deferred to next month',nf(k.deferred)+' units',c.fullWanted?'Full quantity still requested':'')}
+    </div>
+    <div class="card"><div class="bd">Days on hand = stock on hand ÷ average monthly sales-out × 30, using the higher of the 3-month and 6-month average. ${c.fullWanted?'The full quantity was still requested despite adequate cover, so the order was escalated with a recorded business reason.':(k.deferred>0?'Cover would move beyond the 30-day target, so the quantity was adjusted to reach 30 days and the remainder deferred to next month.':'Cover after this order stays within the 30-day target, so it proceeds.')}</div></div>`;
+  }
+  const g=o.growth;
+  return `<div class="banner b-blue">This customer is reviewed on demand growth against recent average demand${g.limit?', within an approved order limit':''}.</div>
+  <div class="summ">
+    ${stat('Average monthly demand',nf(g.avg)+' units','Last 6 months')}
+    ${stat('Requested this order',nf(g.req)+' units','')}
+    ${stat('Demand growth',pct(g.pct),'Review threshold 50%')}
+    ${stat('Approved order limit',g.limit?nf(g.limit)+' units':'No limit','')}
+  </div>
+  <div class="card"><div class="bd">${g.pct>g.threshold?'Growth is above the review threshold, so a manager decision is required. A raised concern would add a Business Unit Director and Finance review.':'Growth is within the review threshold, so the order proceeds without a manager decision.'}</div></div>`;
+}
+function stat(l,v,s){return `<div class="stat"><div class="l">${l}</div><div class="v">${v}</div>${s?`<div class="hint">${s}</div>`:''}</div>`;}
+function posText(p){return (100+p)+'% of plan to date'+(p>20?' — above 120%, senior review':p>0?' — above plan':' — within plan');}
+function defaultApproved(o,i){if(o.sector==='egydrug'&&o.coverage&&!o.coverage.fullWanted)return cov(o.coverage).approved;return o.lines[i].qty;}
+function approvedFields(o){return `<div class="fld"><label>Approved quantity</label>${o.lines.map((l,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0"><span><b>${l.p}</b><span class="hint" style="display:block;margin:0">Requested ${nf(l.qty)}</span></span><input class="qty" type="number" min="0" max="${l.qty}" value="${defaultApproved(o,i)}" data-aq="${i}"></div>`).join('')}<div class="hint">May not be higher than the quantity requested.</div><div class="hint" id="aqerr" style="color:var(--red)"></div></div>`;}
+function combinedPanel(o){if(S.role!=='BackOffice')return '';if(!(o.lines||[]).some(l=>l.others&&l.others.length))return '';
+  return `<div class="card" style="margin-top:16px"><div class="hd">Combined position across distributors <span class="mini">Back-Office only</span></div><div class="tbl-wrap"><table><thead><tr><th>Product</th><th>This order</th><th>Earlier this month</th><th>Other distributors</th><th>Combined</th></tr></thead><tbody>
+  ${o.lines.map(l=>{const oth=l.others||[];const os=oth.reduce((a,x)=>a+x.q,0);return `<tr><td><b>${l.p}</b></td><td class="tnum">${nf(l.qty)}</td><td class="tnum">${nf(l.taken)}</td><td>${oth.length?oth.map(x=>esc(x.d)+' · '+nf(x.q)).join('<br>'):'<span class="hint">None</span>'}</td><td class="tnum"><b>${nf(l.qty+l.taken+os)}</b></td></tr>`;}).join('')}
+  </tbody></table></div><div class="bd hint">Quantities for the same customer and product are added across every distributor before the checks run.</div></div>`;}
+function correctionCard(o){const dm=S.role==='DistMgr';
+  if(dm?o.kind!=='returned':!(S.role==='BackOffice'&&['pending','escalated','concern','returned'].includes(o.kind)))return '';
+  return `<div class="card" style="margin-top:16px"><div class="hd">${dm?'Correct and resubmit':'Correct a quantity'}</div><div class="bd">
+    ${o.lines.map((l,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0"><span><b>${l.p}</b><span class="hint" style="display:block;margin:0">Currently ${nf(l.qty)}</span></span><input class="qty" type="number" min="1" value="${l.qty}" data-cq="${i}"></div>`).join('')}
+    <div class="hint" id="cqerr" style="color:var(--red)"></div>
+    <div class="fld" style="margin-top:10px"><label>Comment</label><textarea id="corrnote" placeholder="${dm?'Explain the correction for the approver…':'Explain what was changed and why…'}"></textarea></div>
+    <button class="btn pri" data-correct="${o.id}">${dm?'Resubmit order':'Save the change and return to the Distribution Manager'}</button></div></div>`;}
+function orderInsight(o){const prods=o.lines.map(l=>l.p);
+  return `<div class="banner b-blue">Current-year demand for ${esc(o.customer)}, so the order can be judged against how this customer has actually bought — trend by product and each product's contribution to the customer's purchases.</div>
+  <div class="cmp">${o.lines.map(l=>trendCard(o.customer,l.p,'Requested '+nf(l.qty))).join('')}</div>
+  <div class="card" style="margin-top:16px"><div class="hd">Contribution to this customer's purchases <span class="mini">Share of units, year to date</span></div><div class="bd">${mixBars(o.customer,prods)}</div></div>
+  <div style="margin-top:14px"><button class="btn" data-analysis="${esc(o.customer)}">Open full customer analysis →</button></div>`;}
+function orderDecision(o){
+  let left='';
+  if(o.kind==='blocked'){
+    return `<div class="banner b-red"><b>This customer is currently restricted and cannot be ordered for.</b> The order was stopped automatically; the other customers on the same submission are unaffected.</div>
+    <div class="card"><div class="bd">To lift a restriction, the customer status is updated by the Back-Office team in Configuration → Customer classifications.</div></div>`;
+  }
+  if(o.sector==='chain'){
+    const over=o.consumed-o.planToDate,p=Math.round(over/o.planToDate*100);
+    left=`<div class="summ">${stat('Order value',money(o.value),'')}${stat('Expected annual plan',money(o.plan),o.branches+' branches')}${stat('Demand to date',money(o.consumed),'')}${stat('Position vs plan',(p>=0?'+':'')+p+'%',posText(p))}</div>
+    <div class="card"><div class="hd">Products on this order</div><div class="tbl-wrap"><table><thead><tr><th>Product</th><th>Requested</th><th>Unit price</th><th>Line value</th><th>Position</th></tr></thead><tbody>
+    ${o.lines.map(l=>`<tr><td><b>${l.p}</b></td><td class="tnum">${nf(l.qty)}</td><td class="tnum">${money(PRODUCTS[l.p].price)}</td><td class="tnum">${money(l.qty*PRODUCTS[l.p].price)}</td><td>${l.over?'<span class="pos-over">Above allowance</span>':'<span class="pos-ok">Within allowance</span>'}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+  }else if(o.sector==='egydrug'){const c=o.coverage,k=cov(c);
+    left=`<div class="summ">${stat('Requested',nf(c.req)+' units','')}${stat('Days on hand now',k.cover+' days','Target 30 · '+k.basis+' average used')}${stat('Proposed approved',nf(k.approved)+' units','')}${stat('Deferred',nf(k.deferred)+' units','')}</div>
+    <div class="banner ${c.fullWanted?'b-amber':'b-green'}">${c.fullWanted?'Full quantity requested despite adequate cover — a business reason has been recorded and senior review applies.':(k.deferred>0?'The quantity has been adjusted to reach the 30-day cover target; the remainder is deferred to next month.':'Cover after this order stays within the 30-day target.')}</div>`;
+  }else{const g=o.growth;
+    left=`<div class="summ">${stat('Average demand',nf(g.avg)+'/mo','Last 6 months')}${stat('Requested',nf(g.req+g.taken)+' units','Incl. this month')}${stat('Growth',pct(g.pct),'Threshold 50%')}${stat('Basis','By quantity','No price shown')}</div>
+    <div class="banner ${g.pct>g.threshold?'b-amber':'b-green'}">${g.pct>g.threshold?'Demand growth is above the review threshold, so a manager decision is required.':'Demand growth is within the review threshold.'}</div>`;
+  }
+  left+=combinedPanel(o);
+  // right column
+  const route=o.route&&o.route.length?o.route:[];
+  let steps='<div class="steps"><div class="stp"><div class="mk done">✓</div><div><div class="tt">Order received &amp; assessed</div><div class="ms">Checks completed on submission</div></div></div>';
+  route.forEach((st,i)=>{const cls=i<o.stage?'done':i===o.stage?(o.kind==='rejected'?'rej':'now'):'todo';const label=i<o.stage?'Approved':i===o.stage?(o.kind==='rejected'?'Rejected':o.kind==='returned'?'Returned':'Awaiting decision'):'Not yet reached';
+    steps+=`<div class="stp"><div class="mk ${cls}">${i+1}</div><div><div class="tt">${STAGE[st]}</div><div class="ms">${label}</div></div></div>`;});
+  if(o.kind==='approved'&&(!route.length||o.stage>=route.length-1))steps+='<div class="stp"><div class="mk done">✓</div><div><div class="tt">Completed</div><div class="ms">Final approved quantity recorded on the order</div></div></div>';
+  steps+='</div>';
+  const decide=canDecide(o)&&['pending','escalated','concern','adjusted','returned'].includes(o.kind);
+  const apprBanner=o.approved?`<div class="banner b-green" style="margin-top:16px"><div><b>Approved quantity</b><br>${o.lines.map((l,i)=>l.p+' '+nf(o.approved[i])+' of '+nf(l.qty)).join(' · ')}</div></div>`:'';
+  const right=`<div class="card"><div class="hd">Approval progress</div><div class="bd">${steps}
+    ${S.role==='BackOffice'&&route.length?`<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-modal="addstage" data-order="${o.id}">Adjust routing</button><button class="btn sm" data-modal="reassign" data-order="${o.id}">Reassign approver</button></div>`:''}
+  </div></div>${apprBanner}
+  ${decide?`<div class="card" style="margin-top:16px"><div class="hd">Your decision <span class="mini">${ROLES[S.role].name}</span></div><div class="bd">
+    ${approvedFields(o)}
+    <div class="fld"><label>Reason for the decision</label><textarea id="rationale" placeholder="Record the business reason for releasing or holding this order…"></textarea><div class="hint">Recorded and shown to the next approver.</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ok" data-decide="approve" data-order="${o.id}">Approve</button>
+      <button class="btn dg" data-decide="reject" data-order="${o.id}">Reject</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button class="btn sm" data-decide="return" data-order="${o.id}">Return for correction</button>
+      <button class="btn sm" data-modal="concern" data-order="${o.id}">Raise a concern</button>
+    </div></div></div>${correctionCard(o)}`:`${correctionCard(o)}<div class="card" style="margin-top:16px"><div class="bd hint">${S.role==='DistMgr'&&o.kind==='returned'?'This order was returned for correction. Update the quantity above and resubmit it.':'This order is not currently awaiting your decision. You can review its full history under Activity.'}</div></div>`}`;
+  return `<div class="dgrid"><div>${left}</div><div>${right}</div></div>`;
+}
+
+/* ---------- Submit wizard ---------- */
+SCREENS.submit=function(){
+  crumb([{t:'My Orders',go:'myorders'},{t:'Submit Order'}]);
+  const step=S.wizStep;
+  $('#main').innerHTML=`<h1 class="ptitle">Submit a demand order</h1>
+  <p class="psub">Prepare and submit an order for review. Every line is checked as it is brought in, so issues are caught before the order enters the approval process.</p>
+  <div class="wiz">
+    ${['Bring in the order','Review &amp; confirm lines','Submit'].map((l,i)=>`<div class="wstep ${step===i+1?'on':step>i+1?'done':''}"><span class="n">${step>i+1?'✓':i+1}</span><div class="lb">${l}</div></div>`).join('')}
+  </div>
+  <div class="card"><div class="bd" id="wizbody"></div></div>`;
+  drawWiz(step);
+};
+function drawWiz(step){
+  const b=$('#wizbody');
+  if(step===1){
+    b.innerHTML=`<div style="max-width:560px;margin:0 auto">
+      <div class="drop" data-wiz="upload"><div class="big">⇪</div><div style="margin-top:8px"><b>Bring in the order file</b></div><div class="hint">Use the approved order template. Click to select the prepared file.</div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+        <button class="btn sm" data-wiz="template">↓ Download the order template</button>
+        <button class="btn pri" data-wiz="next1">Continue →</button>
+      </div></div>`;
+  }else if(step===2){
+    b.innerHTML=`<div class="banner b-amber">2 lines need attention before this order can be submitted. The remaining lines are ready.</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Customer code</th><th>Customer (from code)</th><th>Product</th><th>Quantity</th><th>Previous orders in the same month</th><th>Result</th></tr></thead><tbody>
+      <tr><td class="tnum">10231</td><td>Seif Group</td><td>Truqap</td><td class="tnum">1,400</td><td class="tnum">300</td><td><span class="chip c-amber">Enters review</span></td></tr>
+      <tr><td class="tnum">20877</td><td>Ali Pharmacy — Heliopolis</td><td>Lynparza</td><td class="tnum">210</td><td class="tnum">20</td><td><span class="chip c-amber">Enters review</span></td></tr>
+      <tr style="background:var(--red-bg)"><td class="tnum">10458</td><td>Roshdy Pharmacies</td><td>Imfinzi</td><td class="tnum">300</td><td class="tnum">0 <span class="hint">(blank)</span></td><td><span class="chip c-red">Restricted customer</span></td></tr>
+      <tr style="background:var(--red-bg)"><td class="tnum">—</td><td>—</td><td>Enhertu</td><td class="tnum">0</td><td class="tnum">0 <span class="hint">(blank)</span></td><td><span class="chip c-red">Quantity must be greater than zero</span></td></tr>
+      <tr><td class="tnum">30219</td><td>Sindbad Pharmacy</td><td>Calquence</td><td class="tnum">40</td><td class="tnum">5</td><td><span class="chip c-green">Within limit — proceeds directly</span></td></tr>
+    </tbody></table></div>
+    <div class="hint" style="margin-top:8px">A blank previous quantity counts as zero. A blank order date takes today's upload date.</div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px">
+      <button class="btn" data-wiz="back2">← Back</button>
+      <div style="display:flex;gap:8px"><button class="btn sm" data-wiz="fix">Remove the 2 flagged lines</button><button class="btn pri" data-wiz="next2" id="toStep3" disabled>Continue →</button></div>
+    </div>`;
+  }else{
+    b.innerHTML=`<div style="max-width:520px;margin:0 auto;text-align:center;padding:14px 0">
+      <div style="font-size:40px;color:var(--green)">✓</div>
+      <h3 style="margin:10px 0 4px">Ready to submit</h3>
+      <p class="hint" style="margin-bottom:18px">3 valid lines will be sent for review. 1 line proceeds directly within its limit.</p>
+      <div style="display:flex;gap:10px;justify-content:center"><button class="btn" data-wiz="back3">← Back</button><button class="btn pri" data-wiz="submitfinal">Submit for review</button></div>
+    </div>`;
+  }
+}
+
+/* ---------- Reference ---------- */
+SCREENS.reference=function(){
+  crumb([{t:'Business Reference'}]);
+  const tab=S.params.tab||'limits';
+  $('#main').innerHTML=`<h1 class="ptitle">Business Reference</h1>
+  <p class="psub">Everyday reference the whole team can check — no need to contact the Back-Office.</p>
+  <div class="tabs">
+    <button class="${tab==='limits'?'on':''}" data-rtab="limits">Order limits</button>
+    <button class="${tab==='groups'?'on':''}" data-rtab="groups">Customer groups</button>
+    <button class="${tab==='coverage'?'on':''}" data-rtab="coverage">Coverage targets</button>
+  </div><div id="rtab"></div>`;
+  drawRef(tab);
+};
+function drawRef(tab){
+  const el=$('#rtab');
+  if(tab==='limits'){
+    el.innerHTML=`<div class="card"><div class="hd">Approved order limits <span class="mini">Independent pharmacies &amp; hospitals</span></div><div class="tbl-wrap"><table><thead><tr><th>Product</th><th>Pharmacy limit</th><th>Hospital limit</th></tr></thead><tbody>
+    ${Object.keys(PRODUCTS).map(p=>{const x=PRODUCTS[p];return `<tr><td><b>${p}</b></td><td>${x.pharmLimit?nf(x.pharmLimit)+' units':'<span class="chip c-grey">No limit</span>'}</td><td>${x.hospLimit?nf(x.hospLimit)+' units':'<span class="chip c-grey">No limit</span>'}</td></tr>`;}).join('')}
+    </tbody></table></div><div class="bd hint">Customer groups, EgyDrug pharmacies and NGOs do not carry a standard limit — their own sector rules apply instead.</div></div>`;
+  }else if(tab==='groups'){
+    el.innerHTML=`<div class="card"><div class="hd">Grouped chains</div><div class="tbl-wrap"><table><thead><tr><th>Chain</th><th>Branches</th><th>Expected annual plan</th></tr></thead><tbody>
+    ${CONFIG.guided.map(g=>`<tr><td><b>${g.chain}</b></td><td class="tnum">${g.branches}</td><td class="tnum">${money(g.plan)}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+  }else{
+    el.innerHTML=`<div class="card"><div class="hd">EgyDrug coverage targets</div><div class="bd">EgyDrug pharmacies are managed to a <b>30-day stock cover</b> target. Orders that would take cover beyond 30 days are trimmed to the target, with the remainder deferred to the following month. Days on hand are worked out on the higher of the 3-month and 6-month average sales-out.</div></div>`;
+  }
+}
+
+/* ---------- Reports ---------- */
+SCREENS.reports=function(){
+  crumb([{t:'Reports'}]);
+  const bySec=Object.keys(SECTORS).map(k=>({n:SECTORS[k].name,c:ORDERS.filter(o=>o.sector===k).length,v:ORDERS.filter(o=>o.sector===k&&o.sector==='chain').reduce((a,o)=>a+(o.value||0),0)}));
+  $('#main').innerHTML=`<h1 class="ptitle">Reports</h1>
+  <p class="psub">Performance and exposure across the approval process. Every report can be exported.</p>
+  <div class="toolbar"><div class="pills"><button class="on">This month</button><button data-report-period="q">This quarter</button></div><div class="sp"></div><button class="btn sm" data-export="1">↓ Export</button></div>
+  <div class="grid cards">
+    <div class="card"><div class="hd">Orders by sector</div><div class="tbl-wrap"><table><thead><tr><th>Sector</th><th>Orders</th><th>Value</th></tr></thead><tbody>
+    ${bySec.map(s=>`<tr><td>${s.n}</td><td class="tnum">${s.c}</td><td class="tnum">${s.v?money(s.v):'—'}</td></tr>`).join('')}
+    </tbody></table></div></div>
+    <div class="card"><div class="hd">Turnaround by stage <span class="mini">Average time per approval stage</span></div><div class="tbl-wrap"><table><thead><tr><th>Stage</th><th>Average</th><th>On time</th></tr></thead><tbody>
+    <tr><td>Second Line Manager</td><td>0.8 days</td><td><span class="chip c-green">92%</span></td></tr>
+    <tr><td>Business Unit Director</td><td>1.1 days</td><td><span class="chip c-amber">78%</span></td></tr>
+    <tr><td>Finance</td><td>1.4 days</td><td><span class="chip c-amber">71%</span></td></tr>
+    <tr><td>CP</td><td>0.9 days</td><td><span class="chip c-green">88%</span></td></tr>
+    </tbody></table></div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><div class="hd">EgyDrug pharmacies closing above the coverage target <span class="mini">Monthly</span></div><div class="tbl-wrap"><table><thead><tr><th>Pharmacy</th><th>Product</th><th>Closing cover</th></tr></thead><tbody>
+    <tr><td>EgyDrug — Nasr City</td><td>Lynparza</td><td>42 days</td></tr>
+    <tr><td>EgyDrug — Maadi</td><td>Calquence</td><td>37 days</td></tr>
+  </tbody></table></div></div>
+  <div class="card" style="margin-top:16px" id="lostcard"><div class="hd">Lost opportunities — rejected and stopped orders <span class="mini">Volume and value</span></div><div class="tbl-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Sector</th><th>Volume</th><th>Value</th><th>Outcome</th></tr></thead><tbody>
+    ${lostRows()}
+  </tbody></table></div></div>
+  <div class="sec-h">Available reports</div>
+  <div class="toolbar" style="gap:8px">${['Monthly summary','Activity report','Exposure &amp; escalation','Approval turnaround','Rejected orders'].map(r=>`<button class="btn sm" data-namedreport="${r}">${r}</button>`).join('')}</div>`;
+};
+
+function lostRows(){const L=ORDERS.filter(o=>['rejected','blocked'].includes(o.kind));
+  const vol=o=>(o.lines||[]).reduce((a,l)=>a+l.qty,0);const val=o=>o.sector==='chain'?(o.lines||[]).reduce((a,l)=>a+l.qty*PRODUCTS[l.p].price,0):0;
+  const rows=L.map(o=>`<tr class="click" data-order="${o.id}"><td><b>${o.id}</b></td><td>${esc(o.customer)}</td><td>${SECTORS[o.sector].name}</td><td class="tnum">${nf(vol(o))} units</td><td class="tnum">${val(o)?money(val(o)):'—'}</td><td>${o.kind==='blocked'?'<span class="chip c-red">Stopped — restricted customer</span>':'<span class="chip c-red">Rejected</span>'}</td></tr>`).join('');
+  const tv=L.reduce((a,o)=>a+vol(o),0),tm=L.reduce((a,o)=>a+val(o),0);
+  return rows+`<tr><td colspan="3"><b>Total</b></td><td class="tnum"><b>${nf(tv)} units</b></td><td class="tnum"><b>${money(tm)}</b></td><td></td></tr>`;}
+function exportCsv(){
+  const head=['Order','Sector','Customer','Volume (units)','Value (EGP, grouped chains only)','Status'];
+  const rows=ORDERS.map(o=>{const u=(o.lines||[]).reduce((a,l)=>a+l.qty,0);const v=o.sector==='chain'?(o.lines||[]).reduce((a,l)=>a+l.qty*PRODUCTS[l.p].price,0):'';return [o.id,SECTORS[o.sector].name,o.customer,u,v,o.status];});
+  const csv=[head,...rows].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  try{const b=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='DOAS_orders_report.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),800);toast('Report exported','ok');}
+  catch(e){toast('Export is not available in this browser','err');}
+}
+
+/* ---------- Stock & Sales-out (Back-Office) ---------- */
+SCREENS.stock=function(){
+  crumb([{t:'Stock & Sales-out'}]);
+  $('#main').innerHTML=`<h1 class="ptitle">Stock &amp; Sales-out</h1>
+  <p class="psub">Current stock and sales-out for the EgyDrug pharmacies. Days on hand = stock ÷ average monthly sales-out × 30, using the higher of the 3-month and 6-month average. Loading the latest figures refreshes cover for every order assessed afterwards.</p>
+  <div class="toolbar"><span class="chip c-grey">Last refreshed: ${STOCKMETA.refreshed}</span><div class="sp"></div><button class="btn pri" data-stockload="1">⇪ Load latest figures</button></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Pharmacy</th><th>Product</th><th>Stock on hand</th><th>Avg 3-month</th><th>Avg 6-month</th><th>Average used</th><th>Days on hand</th></tr></thead><tbody>
+  ${STOCK.map(r=>{const k=cov({stock:r.stock,avg3:r.avg3,avg6:r.avg6,req:0});return `<tr><td>${r.ph}</td><td><b>${r.p}</b></td><td class="tnum">${nf(r.stock)}</td><td class="tnum">${nf(r.avg3)}</td><td class="tnum">${nf(r.avg6)}</td><td class="tnum">${nf(k.avg)} <span class="hint">(${k.basis})</span></td><td>${k.cover>30?'<span class="chip c-amber">'+k.cover+' days — above target</span>':'<span class="chip c-green">'+k.cover+' days</span>'}</td></tr>`;}).join('')}
+  </tbody></table></div></div>`;
+};
+function modalStockLoad(){
+  openModal(`<div class="modal"><div class="mh"><b>Load stock and sales-out</b><button class="x" data-close="1">×</button></div>
+  <div class="mb"><div class="drop" data-stockpick="1"><div class="big">⇪</div><div style="margin-top:6px"><b>Select the latest stock and sales-out file</b></div><div class="hint">Figures are loaded by the Back-Office team and days on hand are recalculated.</div></div>
+  <div id="stockpreview" class="hide" style="margin-top:14px"></div></div>
+  <div class="mf"><button class="btn" data-close="1">Cancel</button><button class="btn pri" id="stockapply" disabled data-stockapply="1">Apply figures</button></div></div>`);
+}
+function analysisCards(c){return Object.keys(PRODUCTS).map(p=>trendCard(c,p,'')).join('');}
+SCREENS.analysis=function(){
+  crumb([{t:'Customer Analysis'}]);
+  const custs=[...new Set(ORDERS.map(o=>o.customer))];const c=S.params.customer||custs[0];
+  $('#main').innerHTML=`<h1 class="ptitle">Customer Analysis</h1>
+  <p class="psub">Current-year demand trend by product and each product's contribution to one customer's purchases.</p>
+  <div class="toolbar"><select class="inp" id="anCust">${custs.map(x=>`<option value="${esc(x)}" ${x===c?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
+  <div class="card"><div class="hd">Contribution to ${esc(c)} <span class="mini">Share of units, year to date</span></div><div class="bd">${mixBars(c,[])}</div></div>
+  <div class="sec-h">Trend by product</div>
+  <div class="cmp">${analysisCards(c)}</div>`;
+};
+
+/* ---------- Configuration ---------- */
+const CFG_AREAS=[
+  ['routing','Approval routing','Which approvers an order visits, by sector.'],
+  ['stages','Approval stages','The people responsible for each approval stage.'],
+  ['thresholds','Order thresholds','When an order needs a manager decision or escalation.'],
+  ['productMap','Product mapping','The manager who owns each product and whether CP applies.'],
+  ['guided','Annual plan rules','The expected annual plan for each customer group.'],
+  ['classifications','Customer classifications','Which sector each customer belongs to, and any restrictions.'],
+  ['notifications','Notification rules','How and when the team is notified.'],
+  ['masterData','Master data','Products, prices, limits, coverage targets and directories.']
+];
+SCREENS.config=function(){
+  crumb([{t:'Configuration'}]);
+  const area=S.cfgArea;
+  $('#main').innerHTML=`<h1 class="ptitle">Configuration</h1>
+  <p class="psub">The Back-Office team maintains the rules and reference data that drive the system — no software change is required. Updates are applied by uploading the approved update file.</p>
+  <div class="grid" style="grid-template-columns:230px 1fr;gap:20px;align-items:start">
+    <div class="card"><div class="bd"><div class="subnav">
+      ${CFG_AREAS.map(a=>`<a data-cfg="${a[0]}" class="${area===a[0]?'on':''}">${a[1]}</a>`).join('')}
+    </div></div></div>
+    <div id="cfgpanel"></div>
+  </div>`;
+  drawCfg(area);
+};
+function drawCfg(area){
+  const meta=CFG_AREAS.find(a=>a[0]===area);
+  const panel=$('#cfgpanel');
+  let table='';
+  if(area==='routing')table=cfgTable(['Sector','Approval path'],CONFIG.routing.map(r=>[r.sector,r.path]));
+  else if(area==='stages')table=cfgTable(['Stage','Responsible'],CONFIG.stages.map(r=>[r.stage,r.holder+(r.single?'':' ')]));
+  else if(area==='thresholds')table=cfgTable(['Sector','Rule'],CONFIG.thresholds.map(r=>[r.sector,r.rule]));
+  else if(area==='productMap')table=cfgTable(['Product','Owning manager','CP review'],CONFIG.productMap.map(r=>[r.product,r.owner,r.compliance?'<span class="chip c-mul">Applies</span>':'<span class="chip c-grey">Not required</span>']));
+  else if(area==='guided')table=cfgTable(['Customer group','Branches','Value per branch','Expected annual plan'],CONFIG.guided.map(r=>[r.chain,r.branches,money(r.perBranch),money(r.plan)]));
+  else if(area==='classifications')table=cfgTable(['Customer','Sector','Status'],CONFIG.classifications.map(r=>[r.customer,r.sector,r.status==='Restricted'?'<span class="chip c-red">Restricted</span>':'<span class="chip c-green">Active</span>']));
+  else if(area==='notifications')table=cfgTable(['Event','How','When'],CONFIG.notifications.map(r=>[r.stage,r.channel,r.timing]));
+  else if(area==='masterData')table=cfgTable(['Data set','Records','Last updated'],CONFIG.masterData.map(r=>[r.set,r.records,r.updated]));
+  panel.innerHTML=`<div class="card"><div class="hd">${meta[1]}<div style="display:flex;gap:8px"><button class="btn sm" data-cfgadd="${area}">Add entry</button><button class="btn sm pri" data-cfgupload="${area}">⇪ Update via file</button></div></div>
+    <div class="bd" style="padding-bottom:6px"><p class="hint" style="margin:0 0 8px">${meta[2]}</p></div>
+    <div class="tbl-wrap">${table}</div></div>`;
+}
+function cfgTable(headers,rows){return `<table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td ${i===0?'':''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;}
+
+/* ---------- About ---------- */
+SCREENS.about=function(){
+  crumb([{t:'Roles & Process'}]);
+  $('#main').innerHTML=`<h1 class="ptitle">Roles &amp; Process</h1>
+  <p class="psub">Who does what in the demand-order process, and how an order moves from submission to approval.</p>
+  <div class="card"><div class="hd">Roles</div><div class="tbl-wrap"><table><thead><tr><th>Role</th><th>Responsibility</th></tr></thead><tbody>
+  ${Object.keys(ROLES).filter(r=>r!=='Management').map(r=>`<tr><td><b>${ROLES[r].name}</b></td><td>${ROLES[r].desc}</td></tr>`).join('')}
+  </tbody></table></div></div>
+  <div class="sec-h">How an order flows</div>
+  <div class="card"><div class="bd"><div class="steps">
+    <div class="stp"><div class="mk done">1</div><div><div class="tt">Submission</div><div class="ms">The Distribution Manager prepares and uploads the order; every line is checked as it is brought in.</div></div></div>
+    <div class="stp"><div class="mk done">2</div><div><div class="tt">Automatic assessment</div><div class="ms">Each order is measured against its sector’s rules. Orders within the rules proceed directly.</div></div></div>
+    <div class="stp"><div class="mk done">3</div><div><div class="tt">Approval</div><div class="ms">Orders needing a decision move through the approvers one stage at a time, with a recorded reason at each release.</div></div></div>
+    <div class="stp"><div class="mk now">4</div><div><div class="tt">Confirmation</div><div class="ms">The approved quantity is confirmed to the person who created the order, and the outcome feeds reporting.</div></div></div>
+  </div></div></div>`;
+};
+
+/* ============================ MODALS ============================ */
+function openModal(html){$('#modalRoot').innerHTML=`<div class="overlay" data-overlay="1">${html}</div>`;}
+function closeModal(){$('#modalRoot').innerHTML='';}
+function modalConcern(o){
+  openModal(`<div class="modal"><div class="mh"><b>Raise a concern — ${o.id}</b><button class="x" data-close="1">×</button></div>
+  <div class="mb">
+    <div class="fld"><label>Concern type</label><select id="concernType" class="inp" style="width:100%">
+      <option>Unusual bulk pattern</option><option>Stock-cover breach</option><option>Pricing anomaly</option><option>Other</option></select></div>
+    <div class="fld"><label>Note</label><textarea id="concernNote" placeholder="Describe the concern for the next approver…"></textarea></div>
+    <p class="hint">Raising a concern routes this order to the Business Unit Director and Finance for review.</p>
+  </div>
+  <div class="mf"><button class="btn" data-close="1">Cancel</button><button class="btn pri" data-concernsave="${o.id}">Raise concern</button></div></div>`);
+}
+function modalAddStage(o){
+  const ALL=['SecondLine','BUDirector','Finance','Compliance'];
+  openModal(`<div class="modal"><div class="mh"><b>Adjust routing — ${o.id}</b><button class="x" data-close="1">×</button></div>
+  <div class="mb"><p class="hint" style="margin-top:0">Add or remove an approval stage for this order. Stages already approved cannot be removed.</p>
+    <div class="fld"><label>Approval stages</label>
+    ${ALL.map(st=>{const idx=(o.route||[]).indexOf(st);const on=idx>=0;const locked=on&&idx<o.stage;return `<label style="display:flex;align-items:center;gap:9px;padding:7px 0;font-weight:400"><input type="checkbox" data-stg="${st}" ${on?'checked':''} ${locked?'disabled':''} style="width:auto"> ${STAGE[st]}${locked?' <span class="hint">(approved)</span>':''}</label>`;}).join('')}
+    </div>
+    <p class="hint">Changes apply to this order only; the product mapping in Configuration is not changed.</p>
+  </div><div class="mf"><button class="btn" data-close="1">Cancel</button><button class="btn pri" data-stagesave="${o.id}">Save</button></div></div>`);
+}
+function modalReassign(o){
+  openModal(`<div class="modal"><div class="mh"><b>Reassign approver — ${o.id}</b><button class="x" data-close="1">×</button></div>
+  <div class="mb"><div class="fld"><label>Move the current stage to</label><select class="inp" style="width:100%"><option>Dr. Hana Sabry</option><option>Mostafa Kamal</option><option>Omar Fathy</option><option>Dina Wahba</option></select></div>
+  <p class="hint">Used when an approver is unavailable, so the order keeps moving.</p></div>
+  <div class="mf"><button class="btn" data-close="1">Cancel</button><button class="btn pri" data-close="1" data-toast="Approver reassigned">Reassign</button></div></div>`);
+}
+function modalUpload(area){
+  const meta=CFG_AREAS.find(a=>a[0]===area);
+  openModal(`<div class="modal"><div class="mh"><b>Update ${meta[1].toLowerCase()} via file</b><button class="x" data-close="1">×</button></div>
+  <div class="mb">
+    <div class="drop" id="cfgdrop" data-cfgpick="1"><div class="big">⇪</div><div style="margin-top:6px"><b>Select the approved update file</b></div><div class="hint">The team maintains this data outside the system and applies it here.</div></div>
+    <div id="cfgpreview" class="hide" style="margin-top:14px"></div>
+  </div>
+  <div class="mf"><button class="btn" data-close="1">Cancel</button><button class="btn pri" id="cfgapply" disabled data-cfgapply="${area}">Apply update</button></div></div>`);
+}
+function modalAdd(area){
+  const meta=CFG_AREAS.find(a=>a[0]===area);
+  openModal(`<div class="modal"><div class="mh"><b>Add entry — ${meta[1]}</b><button class="x" data-close="1">×</button></div>
+  <div class="mb"><div class="fld"><label>Name / description</label><input class="inp" style="width:100%" placeholder="Enter a value…"></div></div>
+  <div class="mf"><button class="btn" data-close="1">Cancel</button><button class="btn pri" data-close="1" data-toast="Entry added">Add</button></div></div>`);
+}
+function modalTemplate(){
+  openModal(`<div class="modal"><div class="mh"><b>Order template</b><button class="x" data-close="1">×</button></div>
+  <div class="mb"><p>The order template is prepared for each customer with the standard fields the team fills in.</p>
+  <p class="hint">The template carries the standard order columns, including previous orders in the same month and the order date.</p></div>
+  <div class="mf"><button class="btn pri" data-close="1" data-toast="Template downloaded">Done</button></div></div>`);
+}
+
+/* ============================ ACTIONS ============================ */
+function readApproved(o){
+  const ins=[...document.querySelectorAll('[data-aq]')];
+  if(!ins.length)return{vals:o.lines.map(l=>l.qty),cut:[]};
+  let msg='';
+  const vals=ins.map((el,i)=>{const v=Number(el.value);let ok=true;
+    if(el.value===''||!Number.isFinite(v)||v<0){ok=false;msg='Enter an approved quantity of zero or more.';}
+    else if(v>o.lines[i].qty){ok=false;msg='The approved quantity cannot be higher than the quantity requested.';}
+    el.classList.toggle('bad',!ok);return v;});
+  const err=$('#aqerr');if(err)err.textContent=msg;
+  if(msg){toast('Check the approved quantity','err');return null;}
+  return{vals,cut:o.lines.map((l,i)=>vals[i]<l.qty?l.p+' '+nf(vals[i])+' of '+nf(l.qty):null).filter(Boolean)};
+}
+function decide(id,action){
+  const o=ORDERS.find(x=>x.id===id);if(!o)return;
+  const reason=($('#rationale')&&$('#rationale').value.trim())||'';
+  if(action==='approve'){
+    const aq=readApproved(o);if(!aq)return;
+    o.approved=aq.vals;
+    const note=((reason?reason+' ':'')+(aq.cut.length?'Approved quantity: '+aq.cut.join('; ')+'.':'')).trim()||undefined;
+    o.history.push({who:ROLES[S.role].name,act:'Approved',when:'just now',note});
+    if(o.route&&o.stage<o.route.length-1){o.stage++;o.status='With '+STAGE[o.route[o.stage]];o.kind='pending';toast('Approved — passed to '+STAGE[o.route[o.stage]],'ok');}
+    else{o.status='Approved';o.kind='approved';o.age='closed';toast('Approved — the final approved quantity is recorded on the order','ok');}
+  }else if(action==='reject'){o.status='Rejected';o.kind='rejected';o.age='closed';o.history.push({who:ROLES[S.role].name,act:'Rejected',when:'just now',note:reason||undefined});o.history.push({who:'System',act:'Recorded as a lost opportunity; the Back-Office team has been notified',when:'just now'});toast('Order rejected — recorded as a lost opportunity and the Back-Office team notified','err');}
+  else if(action==='return'){o.status='Returned for correction';o.kind='returned';o.history.push({who:ROLES[S.role].name,act:'Returned for correction',when:'just now',note:reason||undefined});toast('Returned to the Distribution Manager');}
+  // navigate back to a sensible list
+  if(['tasks'].includes(S.screen)){render();}
+  else{S.screen='order';S.params={id:o.id,tab:'activity'};render();}
+}
+function correct(id){
+  const o=ORDERS.find(x=>x.id===id);if(!o)return;
+  const ins=[...document.querySelectorAll('[data-cq]')];let bad=false;
+  const vals=ins.map(el=>{const v=Number(el.value);const ok=el.value!==''&&Number.isFinite(v)&&v>0;el.classList.toggle('bad',!ok);if(!ok)bad=true;return v;});
+  const err=$('#cqerr');if(bad){if(err)err.textContent='Enter a quantity greater than zero.';toast('Check the quantities','err');return;}
+  if(err)err.textContent='';
+  const note=($('#corrnote')&&$('#corrnote').value.trim())||undefined;
+  const changed=o.lines.map((l,i)=>vals[i]!==l.qty?l.p+' '+nf(l.qty)+' → '+nf(vals[i]):null).filter(Boolean);
+  o.lines.forEach((l,i)=>{l.qty=vals[i];});
+  const text=(note?note+' ':'')+(changed.length?'Quantity changed: '+changed.join('; ')+'.':'');
+  if(S.role==='DistMgr'){
+    o.kind='pending';o.stage=0;o.status='With '+STAGE[o.route[0]];o.age='today';
+    o.history.push({who:'Distribution Manager',act:'Corrected and resubmitted the order',when:'just now',note:text.trim()||undefined});
+    toast('Order resubmitted for review','ok');
+  }else{
+    o.kind='returned';o.status='Returned for correction';
+    o.history.push({who:ROLES[S.role].name,act:'Changed a quantity and returned the order to the Distribution Manager',when:'just now',note:text.trim()||undefined});
+    toast('Change saved — returned to the Distribution Manager','ok');
+  }
+  S.screen='order';S.params={id:o.id,tab:'activity'};render();
+}
+
+/* ============================ EVENT DELEGATION ============================ */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-nav],[data-order],[data-sector],[data-kpi],[data-sort],[data-sec],[data-otab],[data-rtab],[data-cfg],[data-cfgupload],[data-cfgadd],[data-cfgpick],[data-cfgapply],[data-decide],[data-modal],[data-close],[data-overlay],[data-concernsave],[data-wiz],[data-clearf],[data-toast],[data-namedreport],[data-export],[data-report-period],[data-correct],[data-stagesave],[data-stockload],[data-stockpick],[data-stockapply],[data-analysis]');
+  if(!t)return;
+  const d=t.dataset;
+  if(d.close!==undefined||d.overlay!==undefined){if(d.overlay!==undefined&&e.target!==t)return; if(d.toast)toast(d.toast,'ok'); closeModal();return;}
+  if(d.toast&&d.close===undefined){toast(d.toast,'ok');}
+  if(d.nav){S.screen=d.nav;S.params={};render();return;}
+  if(d.order&&d.decide===undefined&&d.modal===undefined){S.screen='order';S.params={id:d.order,tab:'decision'};render();return;}
+  if(d.sector){S.screen='orders';S.filters.sector=d.sector;S.filters.status='all';render();return;}
+  if(d.kpi){const o=JSON.parse(d.kpi);S.screen=o.nav;S.filters[o.fk==='status'?'status':o.fk]=o.fv;if(o.fv==='overdue')S.filters.status='overdue';S.filters.sector='all';render();return;}
+  if(d.sort){if(S.sort.key===d.sort)S.sort.dir*=-1;else{S.sort.key=d.sort;S.sort.dir=1;}$('#ordersTable')&&SCREENS.orders();return;}
+  if(d.sec){S.filters.sector=d.sec;drawOrders();document.querySelectorAll('#secpills button').forEach(b=>b.classList.toggle('on',b.dataset.sec===d.sec));return;}
+  if(d.clearf){S.filters={sector:'all',status:'all',q:''};SCREENS.orders();return;}
+  if(d.otab){S.params.tab=d.otab;const o=ORDERS.find(x=>x.id===S.params.id);document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.otab===d.otab));drawOrderTab(o,d.otab);return;}
+  if(d.rtab){S.params.tab=d.rtab;SCREENS.reference();return;}
+  if(d.cfg){S.cfgArea=d.cfg;SCREENS.config();return;}
+  if(d.cfgupload){modalUpload(d.cfgupload);return;}
+  if(d.cfgadd){modalAdd(d.cfgadd);return;}
+  if(d.cfgpick!==undefined){
+    const pv=$('#cfgpreview');pv.classList.remove('hide');
+    pv.innerHTML=`<div class="banner b-green" style="margin:0">File read successfully. Changes to apply: <b>3 entries updated, 1 added, 0 removed.</b></div>`;
+    $('#cfgapply').disabled=false;return;}
+  if(d.cfgapply){closeModal();toast('Update applied — the new values are now in effect','ok');return;}
+  if(d.decide){decide(d.order,d.decide);return;}
+  if(d.modal){const o=ORDERS.find(x=>x.id===d.order);if(d.modal==='concern')modalConcern(o);if(d.modal==='addstage')modalAddStage(o);if(d.modal==='reassign')modalReassign(o);return;}
+  if(d.concernsave){const o=ORDERS.find(x=>x.id===d.concernsave);const ty=$('#concernType').value;const note=$('#concernNote').value.trim();
+    if(!o.flags.includes('concern'))o.flags.push('concern');
+    o.kind='concern';o.route=['SecondLine','BUDirector','Finance'];o.stage=Math.max(o.stage,1);o.status='With '+STAGE[o.route[o.stage]];
+    o.history.push({who:ROLES[S.role].name,act:'Raised a concern — '+ty,when:'just now',note:note||undefined});
+    closeModal();toast('Concern raised — escalated for review','ok');S.screen='order';S.params={id:o.id,tab:'activity'};render();return;}
+  if(d.wiz){handleWiz(d.wiz);return;}
+  if(d.namedreport){if(d.namedreport==='Rejected orders'){const lc=document.getElementById('lostcard');lc&&lc.scrollIntoView({behavior:'smooth',block:'center'});toast('Rejected orders shown below','ok');return;}toast(d.namedreport+' generated','ok');return;}
+  if(d.export!==undefined){exportCsv();return;}
+  if(d.correct){correct(d.correct);return;}
+  if(d.analysis!==undefined){S.screen='analysis';S.params={customer:d.analysis};render();return;}
+  if(d.stockload!==undefined){modalStockLoad();return;}
+  if(d.stockpick!==undefined){const pv=$('#stockpreview');pv.classList.remove('hide');pv.innerHTML='<div class="banner b-green" style="margin:0">File read successfully. <b>'+STOCK.length+' pharmacy and product rows</b> will be refreshed and days on hand recalculated.</div>';$('#stockapply').disabled=false;return;}
+  if(d.stockapply!==undefined){STOCK.forEach(r=>{r.stock=Math.max(0,r.stock-60);r.avg3+=10;});STOCKMETA.refreshed='Just now';closeModal();if(S.screen==='stock')SCREENS.stock();toast('Figures loaded — days on hand recalculated','ok');return;}
+  if(d.stagesave){const o=ORDERS.find(x=>x.id===d.stagesave);const ALL=['SecondLine','BUDirector','Finance','Compliance'];
+    const keep=ALL.filter(st=>{const el=document.querySelector('[data-stg="'+st+'"]');return el&&(el.checked||el.disabled&&(o.route||[]).includes(st));});
+    if(!keep.length){toast('At least one approval stage is needed','err');return;}
+    const cur=(o.route||[])[o.stage];o.route=keep;o.stage=keep.includes(cur)?keep.indexOf(cur):Math.min(o.stage,keep.length-1);
+    if(['pending','escalated','concern'].includes(o.kind))o.status='With '+STAGE[o.route[o.stage]];
+    o.history.push({who:ROLES[S.role].name,act:'Adjusted the approval route: '+keep.map(k=>STAGE[k]).join(' → '),when:'just now'});
+    closeModal();toast('Routing updated','ok');S.screen='order';S.params={id:o.id,tab:'decision'};render();return;}
+  if(d.reportPeriod){toast('Period updated');return;}
+});
+function handleWiz(a){
+  if(a==='template')return modalTemplate();
+  if(a==='upload'){toast('Order file read — 16 lines');S.wizStep=2;SCREENS.submit();return;}
+  if(a==='next1'){S.wizStep=2;SCREENS.submit();return;}
+  if(a==='back2'){S.wizStep=1;SCREENS.submit();return;}
+  if(a==='fix'){$('#toStep3').disabled=false;toast('2 flagged lines removed — ready to continue','ok');return;}
+  if(a==='next2'){S.wizStep=3;SCREENS.submit();return;}
+  if(a==='back3'){S.wizStep=2;SCREENS.submit();$('#toStep3')&&($('#toStep3').disabled=false);return;}
+  if(a==='submitfinal'){
+    const nid='CG-'+(1047+Math.floor(Math.random()*9));
+    ORDERS.unshift(ord({id:nid,sector:'chain',customer:'Seif Group',submittedBy:DM_USERS[0],created:'just now',age:'today',
+      status:'With Second Line Manager',kind:'pending',route:['SecondLine','BUDirector','Finance','Compliance'],stage:0,flags:[],
+      plan:2310000,planToDate:1347500,consumed:1690000,value:1400*PRODUCTS.Truqap.price,branches:22,
+      lines:[{p:'Truqap',qty:1400,taken:300,over:true}],
+      history:[{who:DM_USERS[0],act:'Submitted the order',when:'just now'}]}));
+    S.wizStep=1;S.screen='myorders';render();toast('Order submitted for review','ok');return;}
+}
+/* search + status filter (input events) */
+document.addEventListener('input',e=>{
+  if(e.target.id==='globalSearch'){S.filters.q=e.target.value;if(S.screen!=='orders'){S.screen='orders';render();}else drawOrders();
+    const inp=$('#globalSearch');if(inp){inp.focus();inp.value=S.filters.q;}}
+  if(e.target.id==='statusFilter'){S.filters.status=e.target.value;drawOrders();}
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='role'){setRole(e.target.value);}
+  if(e.target.id==='anCust'){S.params={customer:e.target.value};SCREENS.analysis();}
+});
+
+/* map order screen id */
+SCREENS.order=SCREENS.order;
+render();
+</script>
+</body>
+</html>
